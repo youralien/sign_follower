@@ -53,16 +53,6 @@ You will implement code that will find the bounding box around the traffic sign 
 ![][yellow_sign_detector]
 [yellow_sign_detector]: images/yellow-sign-detector.gif "Bounding box generated around the yellow parts of the image.  The video is converted to HSV colorspace, an inRange operation is performed to filter out any non yellow objects, and finally a bounding box is generated."
 
-__DELIVERABLE FOR THIS SECTION__: Visualize all these steps and save those results as a screenshot, screen capture, or saved image. And of course, write the code that produces these results.
-
-#### Red-Green-Blue to Hue-Saturation-Value Images
-
-There are different ways to represent the information in an image. A gray-scale iamge has `(n_rows, n_cols)`. An rgb image has shape `(n_rows, n_cols, 3)` since it has three channels: red, green, and blue.
-
-Color images are also represented in different ways too.  Aside from the default RGB colorspace, there exists alot of others. We'll be focused on using [HSV/HSL](https://en.wikipedia.org/wiki/HSL_and_HSV): Hue, Saturation, and Value/Luminosity. Like RGB, a HSV image has three channels and is shape `(n_rows, n_cols, 3)`. The hue channel is well suited for color detection tasks, because we can filter by color on a single dimension of measurement, and it is a measure that is invariant to lighting conditions.  
-
-[OpenCV provides methods to convert images from one color space to another.](http://docs.opencv.org/2.4/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor).
-
 You will be writing all your image processing pipeline within the `process_image` callback function. Here is what the starter code looks like so far.
 
 ```python
@@ -71,6 +61,10 @@ You will be writing all your image processing pipeline within the `process_image
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
+        pt1, pt2 = self.sign_bounding_box()
+        
+        # some other code to crop the bounding box
+        # and recognize the traffic sign
         (...)
 
         # Creates a window and displays the image
@@ -78,26 +72,70 @@ You will be writing all your image processing pipeline within the `process_image
         cv2.waitKey(5)
 ```
 
+The goal of localizing the signs in the scene is to determine `pt1 = (x1,y1)` and `pt2 = (x2,y2)` points that define the upper lefthand corner and lower righthand corner of a bounding box around the sign. You can do most of your work in the instance method `sign_bounding_box` if you define your working variables as instance variables, i.e. `self.cv_image`.
+
+Whether you follow along with the suggested steps for creating a sign recognizer or have ideas of your own, revisit these questions often when designing your image processing pipeline:
+
+* What are some distinguishing visual features about the sign?  Is there similarities in color and/or geometry?
+* Since we are interested in generating a bounding box to be used in cropping out the sign from the original frame, what are different methods of generating candidate boxes?
+* What defines a good bounding box crop?  It depends a lot on how robust the sign recognizer you have designed.
+
+Finally, if you think that working with individual images, outside of the `StreetSignRecognizer` class would be helpful -- I often like to prototype the algorithms I am developing in a jupyter notebook -- feel free to use some of the image frames in the `images/` folder.  In addition, you can save your own images from the video feed by setting the flag
+
+```python
+self.use_saver = True
+```
+
+The images currently save in your `/tmp/` directory. See the `process_image` callback for more details.
+
+#### Red-Green-Blue to Hue-Saturation-Value Images
+
+There are different ways to represent the information in an image. A gray-scale iamge has `(n_rows, n_cols)`. An rgb image has shape `(n_rows, n_cols, 3)` since it has three channels: red, green, and blue.
+
+Color images are also represented in different ways too.  Aside from the default RGB colorspace, there exists alot of others. We'll be focused on using [HSV/HSL](https://en.wikipedia.org/wiki/HSL_and_HSV): Hue, Saturation, and Value/Luminosity. Like RGB, a HSV image has three channels and is shape `(n_rows, n_cols, 3)`. The hue channel is well suited for color detection tasks, because we can filter by color on a single dimension of measurement, and it is a measure that is invariant to lighting conditions.  
+
+[OpenCV provides methods to convert images from one color space to another](http://docs.opencv.org/2.4/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor).
+
 A good first step would be convert `self.cv_image` into an HSV image and visualize it. Like any good roboticist, visualize everything to make sure it meets your expectations.
 
 #### Filtering the image for only yellow
 
 Since the set of signs we are recognizing are all yellow, by design, we can handtune a filter that will only select the certain shade of yellow in our image.
 
-The starter code provides some helper methods
+Look for the lines where
 
-* What are some distinguishing visual features about the sign?  Is there similarities in color and/or geometry?
-* Since we interested in generating a bounding box to be used in cropping out the sign from the original frame, what are different methods of generating candidate boxes?
-* What defines a good bounding box crop?  It depends a lot on how robust the sign recognizer you have designed.
+```python
+        self.use_slider = False
+        self.use_mouse_hover = False
+```
+
+Setting these flags to True will turn on GUI elements associated with the OpenCV window.
+
+If you hover over a certain part of the image, it will tell you what R, G, B value you are hovering over. The details are in the `process_mouse_event` method.  Once you have created an HSV image, you can also edit this function to also display the Hue, Saturation, and Value numbers.
+
+The sliders will help set the hsv lower and upper bound limits (`self.hsv_lb` and `self.hsv_ub`), which you can then use as limits for filtering certain parts of the HSV spectrum. Check out the OpenCV [inRange method](http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_colorspaces/py_colorspaces.html) for more details on how to threshold an image for a range of a particular color.
+
+By the end of this step, you should have a binary image mask where all the pixels that are white represent the color range that was specified in the thresholding operation.
+
+#### Generating a bounding box 
+
+You can develop an algorithm that operates on the binary image mask that you developed in the step above.
 
 One method that could be fruitful would be dividing the image in a grid.  The object then is to decide which grid cells contain the region of interest.
+
+You might want to write a method that divides the image into a binary grid of `grid_size=(M,N)`; if tile in the grid contains a large enough percentage of white pixels, the tile will be turned on.
+
+Then you can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
 
 ![][grid]
 [grid]: images/grid.png
 
-Some suggested deliverables for this step
-1. Use the provided test images `images/leftturn_scene.jpg` to develop a sign localization algorithm.
-2. Drawing a way 
+OpenCV has a method called `boundingRect` which seems promising too.  I found a nice example, albeit in C++, that [finds a bounding rectangle using a threshold mask](http://answers.opencv.org/question/4183/what-is-the-best-way-to-find-bounding-box-for-binary-mask/) like you have.  It seems like it will depend on your thresholding operation to be pretty clean (i.e. no spurious white points, the only object that should be unmasked is the sign of interest). 
+
+![][boundingRectStars]
+[boundingRectStars]: images/boundingRectStars.png
+
+The goal is to produce `pt1 = (x1, y1)` and `pt2 = (x2, y2)` that define the upperleft and lower right corners of the bounding box.  Remember that the quality of the bounding box you need to produce will depend on how robust later steps of your computer vision pipeline are. 
 
 ## Recognition
 

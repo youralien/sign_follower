@@ -119,9 +119,9 @@ class StreetSignRecognizer(object):
 
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, pt1, pt2, color=(0, 0, 255), thickness=5)
+ 
+        # creates a window and displays the image for a X milliseconds 
         cv2.imshow('video_window', self.cv_image)
-
-        # displays the image for a X milliseconds 
         cv2.waitKey(5)
 
         # saving frames of video as images can be a useful format to work with
