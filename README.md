@@ -200,11 +200,29 @@ By the end of this step, you should have a binary image mask where all the pixel
 
 You can develop an algorithm that operates on the binary image mask that you developed in the step above.
 
-One method that could be fruitful would be dividing the image in a grid.  The object then is to decide which grid cells contain the region of interest.
+One method that could be fruitful would be dividing the image in a grid.  You might want to write a method that divides the image into a binary grid of `grid_size=(M,N)`; if tile in the grid contains a large enough percentage of white pixels, the tile will be turned on.
 
-You might want to write a method that divides the image into a binary grid of `grid_size=(M,N)`; if tile in the grid contains a large enough percentage of white pixels, the tile will be turned on.
+Since the images are stored as 2D arrays, you can use NumPy-like syntax to slice the images in order to obtain these grid cells. We've provided an example in `grid_image.py` which I'll show here:
 
-Then you can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
+```python
+import cv2 
+
+img = cv2.imread("../images/leftturn_scene.jpg")
+
+grid_cell_w = 64*3
+grid_cell_h = 48*3
+
+cv2.namedWindow("my_window")
+
+# NumPy array slicing!!
+grid_cell = img[grid_cell_h:2*grid_cell_h,
+                grid_cell_w:2*grid_cell_w] 
+
+cv2.imshow("my_window", grid_cell)
+cv2.waitKey(0);
+```
+
+The object then is to decide which grid cells contain the region of interest. You can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
 
 ![][grid]
 [grid]: images/grid.png
@@ -214,7 +232,7 @@ OpenCV has a method called `boundingRect` which seems promising too.  I found a 
 ![][boundingRectStars]
 [boundingRectStars]: images/boundingRectStars.png
 
-The goal is to produce `pt1 = (x1, y1)` and `pt2 = (x2, y2)` that define the upperleft and lower right corners of the bounding box.  Remember that the quality of the bounding box you need to produce will depend on how robust later steps of your computer vision pipeline are.
+The goal is to produce `left_top = (x1, y1)` and `right_bottom = (x2, y2)` that define the top left and bottom right corners of the bounding box.
 
 ## Recognition
 
