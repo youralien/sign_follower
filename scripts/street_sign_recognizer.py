@@ -47,7 +47,7 @@ class StreetSignRecognizer(object):
 
         # 'use' parameters for quick changes in node functionality
         self.use_slider = False
-        self.use_mouse_hover = False
+        self.use_mouse_hover = True
         self.use_saver = False
         self.use_predict = False
 
@@ -192,5 +192,5 @@ class StreetSignRecognizer(object):
         return pt1, pt2
     
 if __name__ == '__main__':
-    node = StreetSignRecognizer("/camera/image_raw","/imSleeping")
+    node = StreetSignRecognizer("/cv_camera/image_raw","/imSleeping")
     node.run()

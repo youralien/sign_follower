@@ -139,4 +139,45 @@ The goal is to produce `pt1 = (x1, y1)` and `pt2 = (x2, y2)` that define the upp
 
 ## Recognition
 
+Recognizing the signs involves determining how well the cropped image if the sign matches the template image for each type of sign. To do this, we will find keypoints in the template image and in the input image, then see how well we can align the keypoints, and finally see how similar the aligned images are.
+
+### finding keypoints
+
+We are finding keypoints using open cv's implementation of the [SIFT algorithm](http://docs.opencv.org/3.1.0/da/df5/tutorial_py_sift_intro.html), then filtering the keypoints ourselves to find the points that match between the input image and each template.
+
+For the template images, the keypoints are calculated once, in `TemplateMatcher`'s init method:
+``` python
+self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
+```
+The first TODO in the `predict` method is to find the keypoints in the input image as the first step to matching it with at template.
+
+### aligning keypoints
+
+In `_compute_prediction`, the first step to aligning the images is to find which keypoints from the two images match. The simplest method for that is to say keypoints whcih are close to eachother match. (note, later steps will correct for "matched" keypionts from mismatched images)
+
+Based on the matched keypoints, the following lines find how to transform the input image so the keypoints align with the template images keypoints (using a homography matrix), then transorms the input image using that matrix, so it should align with the template.
+``` python
+M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, self.ransac_thresh)
+img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+```
+### comparing images
+
+At this point, we have two images which, if they are of the same sign, should be aligned with each other. If they are of different signs, the matched keypoints were likely not well aligned, and the homography matrix probably skewed the image into an unrecognizable blob, but the computer can't tell what is a reasonable image and what is an unrecognizable blob, so now we have to determine how similar the two images are.
+
+The `compare_images` function at the top of the file is used to find how similar two images are to each other. This one is left up to you, but here are a few hints:
+
+First, there is one thing we have yet to account for while comparing images: lighting. If you have tried to do blob detection and then tried again when the sun went down, you know that lighting wreaks havoc on computer vision. Since we are using grayscale images, and we have cropped them so both images are of the same thing, we can eliminate most of the effects of lighting by normalizing the image. This should be implemented in the `normalize` function and used in `compare_images`
+
+For finding the difference between the images, remember that, in code, an image is just an array of numbers. You can do arithmatic with the images to find how close they are to the same.
+
+### converting to useful output
+
+Back in the `predict` method, the output of `compare_images` passes through `_compute_prediction` and is saved in the dictionary `visual_diff`, which maps the keys associated with the template images to the calulated difference between that template image and the input image.
+
+The final step for `TemplateMatcher` is to convert these differences into a scaled confidence value representing how well the input image matches each of the templates. This step is really just algebra: you need to make large numbers small and small numbers large, but you also want to scale your output so that a value near 1 always represents a high confidence.
+
+### conclusion
+
+That's all, this class now outputs how well an input image matches each of a given set of templates. One nice part about this approach is that no single step needs to be perfectly tuned: finding slightly too many keypoints initially is quickly corrected when you find matches, and incorrect matches are generally eliminated in the homography matrix transformation, so by the time you get to the numerical comparison of images, you are usually looking at either a reasonable match or two extremely different images. This system is therefore relatively robust, and has a low rate of false positives; however, it is suseptible to false negatives.
+
 ## Navigating
