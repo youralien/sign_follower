@@ -205,9 +205,12 @@ One method that could be fruitful would be dividing the image in a grid.  You mi
 Since the images are stored as 2D arrays, you can use NumPy-like syntax to slice the images in order to obtain these grid cells. We've provided an example in `grid_image.py` which I'll show here:
 
 ```python
-import cv2 
+import cv2
+import os
 
-img = cv2.imread("../images/leftturn_scene.jpg")
+imgpath = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                       "../images/leftturn_scene.jpg")
+img = cv2.imread(imgpath)
 
 grid_cell_w = 64*3
 grid_cell_h = 48*3
