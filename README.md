@@ -57,8 +57,8 @@ You will be writing all your image processing pipeline within the `process_image
 
 ```python
     def process_image(self, msg):
-        "" Process image messages from ROS and stash them in an attribute
-            called cv_image for subsequent processing ""
+        """ Process image messages from ROS and stash them in an attribute
+            called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
         left_top, right_bottom = self.sign_bounding_box()
@@ -80,12 +80,12 @@ The goal of localizing the signs in the scene is to determine `left_top = (x1,y1
 
 ```python
     def sign_bounding_box(self):
-        ""
+        """
         Returns
         -------
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
-        ""
+        """
         # TODO: YOUR SOLUTION HERE
         left_top = (200, 200)
         right_bottom = (400, 400)
@@ -118,8 +118,8 @@ Here's a callback that will help to display the RGB value when hovering over the
 
 ```python
     def process_mouse_event(self, event, x,y,flags,param):
-        "" Process mouse events so that you can see the color values associated
-            with a particular pixel in the camera images ""
+        """ Process mouse events so that you can see the color values associated
+            with a particular pixel in the camera images """
         image_info_window = 255*np.ones((500,500,3))
 
         # show hsv values
@@ -168,27 +168,27 @@ Then, add the following callback methods to the class definition that respond to
 
 ```python
     def set_h_lb(self, val):
-        "" set hue lower bound ""
+        """ set hue lower bound """
         self.hsv_lb[0] = val
 
     def set_s_lb(self, val):
-        "" set saturation lower bound ""
+        """ set saturation lower bound """
         self.hsv_lb[1] = val
 
     def set_v_lb(self, val):
-        "" set value lower bound ""
+        """ set value lower bound """
         self.hsv_lb[2] = val
 
     def set_h_ub(self, val):
-        "" set hue upper bound ""
+        """ set hue upper bound """
         self.hsv_ub[0] = val
 
     def set_s_ub(self, val):
-        "" set saturation upper bound ""
+        """ set saturation upper bound """
         self.hsv_ub[1] = val
 
     def set_v_ub(self, val):
-        "" set value upper bound ""
+        """ set value upper bound """
         self.hsv_ub[2] = val
 ```
 
