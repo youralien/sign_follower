@@ -141,15 +141,61 @@ The goal is to produce `pt1 = (x1, y1)` and `pt2 = (x2, y2)` that define the upp
 
 Recognizing the signs involves determining how well the cropped image if the sign matches the template image for each type of sign. To do this, we will find keypoints in the template image and in the input image, then see how well we can align the keypoints, and finally see how similar the aligned images are.
 
+### testing
+
+We have template images as well as static test images for the template matcher in the repository, so we can run the code with the correct template images and try to match them to the static test images we have.
+
+To do this, first we need to initialize the template matcher with the template images:
+``` python
+if __name__ == '__main__':
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+        
+    tm = TemplateMatcher(images)
+```
+You can put this at the bottom of the file, and this if statement will mean that this part won't run when template_matcher is imported by other files.
+
+Next, we can run `tm.predict` on our test scenes using this:
+``` python
+scenes = [
+    "../images/uturn_scene.jpg",
+    "../images/leftturn_scene.jpg",
+    "../images/rightturn_scene.jpg"
+]
+
+for filename in scenes:
+    scene_img = cv2.imread(filename, 0)
+    pred = tm.predict(scene_img)
+    print filename.split('/')[-1]
+    print pred
+```
+This reads the test images, runs `tm.predict` on each image, and prints the file name followed by the prediction. Given just the starter code, this should be the output:
+``` bash
+uturn_scene.jpg
+{}
+leftturn_scene.jpg
+{}
+rightturn_scene.jpg
+{}
+```
+
 ### finding keypoints
 
 We are finding keypoints using open cv's implementation of the [SIFT algorithm](http://docs.opencv.org/3.1.0/da/df5/tutorial_py_sift_intro.html), then filtering the keypoints ourselves to find the points that match between the input image and each template.
 
-For the template images, the keypoints are calculated once, in `TemplateMatcher`'s init method:
+For the template images, we can calculate the keypoints in the initialization function because the images won't chage. To find those keypoints, we can cycle through the input dictionary of template images, read the image files as grayscale images and compute the keypoints using openCV's SIFT implementation:
 ``` python
-self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
+for k, filename in images.iteritems():
+    # load template sign images as grayscale
+    self.signs[k] = cv2.imread(filename,0)
+
+    # precompute keypoints and descriptors for the template sign 
+    self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
 ```
-The first TODO in the `predict` method is to find the keypoints in the input image as the first step to matching it with at template.
+The `predict` method is the "main" method of TemplateMatcher. It begins by finding the keypoints in the input image as the first step to matching it with at template. At this point, the template images are initialized and the predict method should run, so you can run the program and it should return predictions for each template image with a zero confidence value. Next, `predict` calls `_compute_prediction` to find how well the input image matches each template image and stores the predictions in a dictionary.
 
 ### aligning keypoints
 
@@ -157,16 +203,19 @@ In `_compute_prediction`, the first step to aligning the images is to find which
 
 Based on the matched keypoints, the following lines find how to transform the input image so the keypoints align with the template images keypoints (using a homography matrix), then transorms the input image using that matrix, so it should align with the template.
 ``` python
-M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, self.ransac_thresh)
+# Transform input image so that it matches the template image as well as possible
+M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
 img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 ```
+Once you add these lines, you should change `img` in the line `visual_diff = compare_images(img, self.signs[k])` to `img_T`.
+
 ### comparing images
 
 At this point, we have two images which, if they are of the same sign, should be aligned with each other. If they are of different signs, the matched keypoints were likely not well aligned, and the homography matrix probably skewed the image into an unrecognizable blob, but the computer can't tell what is a reasonable image and what is an unrecognizable blob, so now we have to determine how similar the two images are.
 
-The `compare_images` function at the top of the file is used to find how similar two images are to each other. This one is left up to you, but here are a few hints:
+The `compare_images` function at the bottom of the file is used to find how similar two images are to each other. This one is left up to you, but here are a few hints:
 
-First, there is one thing we have yet to account for while comparing images: lighting. If you have tried to do blob detection and then tried again when the sun went down, you know that lighting wreaks havoc on computer vision. Since we are using grayscale images, and we have cropped them so both images are of the same thing, we can eliminate most of the effects of lighting by normalizing the image. This should be implemented in the `normalize` function and used in `compare_images`
+First, there is one thing we have yet to account for while comparing images: lighting. If you have tried to do blob detection and then tried again when the sun went down, you know that lighting wreaks havoc on computer vision. Since we are using grayscale images, and we have cropped them so both images are of the same thing, we can eliminate most of the effects of lighting by normalizing the image. Mathematically this can be done by taking `(each_element - mean)/standard_dev`. Images are stored as numpy arrays, so you can use some nice numpy functions to make this math easier.
 
 For finding the difference between the images, remember that, in code, an image is just an array of numbers. You can do arithmatic with the images to find how close they are to the same.
 
