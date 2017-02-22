@@ -1,6 +1,6 @@
 # Sign Follower
 
-By the end of the Traffic Sign Follower project, you will have a robot that will look like this! 
+By the end of the Traffic Sign Follower project, you will have a robot that will look like this!
 
 **Video Demo:** [NEATO ROBOT OBEYS TRAFFIC SIGNS](https://youtu.be/poReVhj1lSA)
 
@@ -11,7 +11,7 @@ By the end of the Traffic Sign Follower project, you will have a robot that will
 
 Navigation and mapping is handled by the built-in ROS package ```neato_2dnav``` .  Mapping the location of the robot in the environment was handled by [```gmapping```](http://wiki.ros.org/gmapping), a package that provides laser-based SLAM (simultaneous localization and mapping).  Navigation was handled by the [```move_base```](http://wiki.ros.org/move_base) package;   our program published waypoints to the ```/move_base_simple/goal``` topic while the internals of path planning and obstacle avoidance were abstracted away.
 
-You will put your comprobo-chops to the test by developing a sign detection node which publishes to a topic, ```/predicted_sign```, once it is confident about recognizing the traffic sign in front of it. 
+You will put your comprobo-chops to the test by developing a sign detection node which publishes to a topic, ```/predicted_sign```, once it is confident about recognizing the traffic sign in front of it.
 
 ### Running and Developing the street_sign_recognizer node
 
@@ -27,7 +27,7 @@ Start by replaying these rosbags on loop:
 rosbag play uturn.bag -l
 ```
 
-They have `/camera/image_raw/compressed` channel recorded. In order to republish the compressed image as a raw image, 
+They have `/camera/image_raw/compressed` channel recorded. In order to republish the compressed image as a raw image,
 
 ```
 rosrun image_transport republish compressed in:=/camera/image_raw _image_transport:=compressed raw out:=/camera/image_raw
@@ -39,15 +39,15 @@ To run the node,
 rosrun sign_follower street_sign_recognizer.py
 ```
 
-If you ran on the steps above correctly, a video window should appear visualizing the Neato moving towards a traffic sign. 
+If you ran on the steps above correctly, a video window should appear visualizing the Neato moving towards a traffic sign.
 
 ### Detecting Signs in Scene Images
 Reliable detection of traffic signs and creating accurate bounding box crops is an important preprocessing step for further steps in the data pipeline.
 
 You will implement code that will find the bounding box around the traffic sign in a scene. We've outlined a suggested data processing pipeline for this task.
 
-1. colorspace conversion to hue, saturation, value (```hsv_image``` seen in the top left window). 
-2. a filter is applied that selects only for objects in the yellow color spectrum. The range of this spectrum can be found using hand tuning (```binarized_image``` seen in the bottom window). 
+1. colorspace conversion to hue, saturation, value (```hsv_image``` seen in the top left window).
+2. a filter is applied that selects only for objects in the yellow color spectrum. The range of this spectrum can be found using hand tuning (```binarized_image``` seen in the bottom window).
 3. a bounding box is drawn around the most dense, yellow regions of the image.
 
 ![][yellow_sign_detector]
@@ -61,18 +61,36 @@ You will be writing all your image processing pipeline within the `process_image
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
-        pt1, pt2 = self.sign_bounding_box()
-        
-        # some other code to crop the bounding box
-        # and recognize the traffic sign
-        (...)
+        left_top, right_bottom = self.sign_bounding_box()
+        left, top = left_top
+        right, bottom = right_bottom
 
-        # Creates a window and displays the image
+        # crop bounding box region of interest
+        cropped_sign = self.cv_image[top:bottom, left:right]
+
+        # draw bounding box rectangle
+        cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
+
+        # creates a window and displays the image for X milliseconds
         cv2.imshow('video_window', self.cv_image)
         cv2.waitKey(5)
 ```
 
-The goal of localizing the signs in the scene is to determine `pt1 = (x1,y1)` and `pt2 = (x2,y2)` points that define the upper lefthand corner and lower righthand corner of a bounding box around the sign. You can do most of your work in the instance method `sign_bounding_box` if you define your working variables as instance variables, i.e. `self.cv_image`.
+The goal of localizing the signs in the scene is to determine `left_top = (x1,y1)` and `right_bottom = (x2,y2)` points that define the upper lefthand corner and lower righthand corner of a bounding box around the sign. You can do most of your work in the instance method `sign_bounding_box`.
+
+```python
+    def sign_bounding_box(self):
+        """
+        Returns
+        -------
+        (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
+            defining topleft and bottomright corners of the bounding box
+        """
+        # TODO: YOUR SOLUTION HERE
+        left_top = (200, 200)
+        right_bottom = (400, 400)
+        return left_top, right_bottom"
+```
 
 Whether you follow along with the suggested steps for creating a sign recognizer or have ideas of your own, revisit these questions often when designing your image processing pipeline:
 
@@ -80,19 +98,13 @@ Whether you follow along with the suggested steps for creating a sign recognizer
 * Since we are interested in generating a bounding box to be used in cropping out the sign from the original frame, what are different methods of generating candidate boxes?
 * What defines a good bounding box crop?  It depends a lot on how robust the sign recognizer you have designed.
 
-Finally, if you think that working with individual images, outside of the `StreetSignRecognizer` class would be helpful -- I often like to prototype the algorithms I am developing in a jupyter notebook -- feel free to use some of the image frames in the `images/` folder.  In addition, you can save your own images from the video feed by setting the flag
-
-```python
-self.use_saver = True
-```
-
-The images currently save in your `/tmp/` directory. See the `process_image` callback for more details.
+Finally, if you think that working with individual images, outside of the `StreetSignRecognizer` class would be helpful -- I often like to prototype the computer vision algorithms I am developing in a jupyter notebook -- feel free to use some of the image frames in the `images/` folder.  In addition, you can save your own images from the video feed by using OpenCV's [`imwrite` method](http://docs.opencv.org/2.4/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=imwrite#imwrite).
 
 #### Red-Green-Blue to Hue-Saturation-Value Images
 
 There are different ways to represent the information in an image. A gray-scale iamge has `(n_rows, n_cols)`. An rgb image has shape `(n_rows, n_cols, 3)` since it has three channels: red, green, and blue.
 
-Color images are also represented in different ways too.  Aside from the default RGB colorspace, there exists alot of others. We'll be focused on using [HSV/HSL](https://en.wikipedia.org/wiki/HSL_and_HSV): Hue, Saturation, and Value/Luminosity. Like RGB, a HSV image has three channels and is shape `(n_rows, n_cols, 3)`. The hue channel is well suited for color detection tasks, because we can filter by color on a single dimension of measurement, and it is a measure that is invariant to lighting conditions.  
+Color images are also represented in different ways too.  Aside from the default RGB colorspace, there exists alot of others. We'll be focused on using [HSV/HSL](https://en.wikipedia.org/wiki/HSL_and_HSV): Hue, Saturation, and Value/Luminosity. Like RGB, a HSV image has three channels and is shape `(n_rows, n_cols, 3)`. The hue channel is well suited for color detection tasks, because we can filter by color on a single dimension of measurement, and it is a measure that is invariant to lighting conditions.
 
 [OpenCV provides methods to convert images from one color space to another](http://docs.opencv.org/2.4/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor).
 
@@ -102,40 +114,128 @@ A good first step would be convert `self.cv_image` into an HSV image and visuali
 
 Since the set of signs we are recognizing are all yellow, by design, we can handtune a filter that will only select the certain shade of yellow in our image.
 
-Look for the lines where
+Here's a callback that will help to display the RGB value when hovering over the image window with a mouse.
 
 ```python
-        self.use_slider = False
-        self.use_mouse_hover = False
+    def process_mouse_event(self, event, x,y,flags,param):
+        """ Process mouse events so that you can see the color values associated
+            with a particular pixel in the camera images """
+        image_info_window = 255*np.ones((500,500,3))
+
+        # show hsv values
+        cv2.putText(image_info_window,
+                    'Color (h=%d,s=%d,v=%d)' % (self.hsv_image[y,x,0], self.hsv_image[y,x,1], self.hsv_image[y,x,2]),
+                    (5,50), # 5 = x, 50 = y
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0,0,0))
+
+        # show bgr values
+        cv2.putText(image_info_window,
+                    'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
+                    (5,100),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0,0,0))
+        cv2.imshow('image_info', image_info_window)
+        cv2.waitKey(5)"
 ```
 
-Setting these flags to True will turn on GUI elements associated with the OpenCV window.
+In the `__init__` method, connect this callback by adding the following line:
 
-If you hover over a certain part of the image, it will tell you what R, G, B value you are hovering over. The details are in the `process_mouse_event` method.  Once you have created an HSV image, you can also edit this function to also display the Hue, Saturation, and Value numbers.
+```python
+cv2.setMouseCallback('video_window', self.process_mouse_event)
+```
+
+Now, if you hover over a certain part of the image, it will tell you what R, G, B value you are hovering over. Once you have created an HSV image, you can edit this function to also display the Hue, Saturation, and Value numbers.
+
+OpenCV windows can be pretty powerful when setting up interactive sliders to change parameters.
+
+In the `__init__` method, copy the following lines which
+```python
+            cv2.namedWindow('threshold_image')
+            self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
+            cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
+            cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
+            cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
+            self.hsv_ub = np.array([255, 255, 255]) # hsv upper bound
+            cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
+            cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
+            cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
+```
+
+Then, add the following callback methods to the class definition that respond to changes in the trackbar sliders
+
+```python
+    def set_h_lb(self, val):
+        """ set hue lower bound """
+        self.hsv_lb[0] = val
+
+    def set_s_lb(self, val):
+        """ set saturation lower bound """
+        self.hsv_lb[1] = val
+
+    def set_v_lb(self, val):
+        """ set value lower bound """
+        self.hsv_lb[2] = val
+
+    def set_h_ub(self, val):
+        """ set hue upper bound """
+        self.hsv_ub[0] = val
+
+    def set_s_ub(self, val):
+        """ set saturation upper bound """
+        self.hsv_ub[1] = val
+
+    def set_v_ub(self, val):
+        """ set value upper bound """
+        self.hsv_ub[2] = val
+```
 
 The sliders will help set the hsv lower and upper bound limits (`self.hsv_lb` and `self.hsv_ub`), which you can then use as limits for filtering certain parts of the HSV spectrum. Check out the OpenCV [inRange method](http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_colorspaces/py_colorspaces.html) for more details on how to threshold an image for a range of a particular color.
 
 By the end of this step, you should have a binary image mask where all the pixels that are white represent the color range that was specified in the thresholding operation.
 
-#### Generating a bounding box 
+#### Generating a bounding box
 
 You can develop an algorithm that operates on the binary image mask that you developed in the step above.
 
-One method that could be fruitful would be dividing the image in a grid.  The object then is to decide which grid cells contain the region of interest.
+One method that could be fruitful would be dividing the image in a grid.  You might want to write a method that divides the image into a binary grid of `grid_size=(M,N)`; if tile in the grid contains a large enough percentage of white pixels, the tile will be turned on.
 
-You might want to write a method that divides the image into a binary grid of `grid_size=(M,N)`; if tile in the grid contains a large enough percentage of white pixels, the tile will be turned on.
+Since the images are stored as 2D arrays, you can use NumPy-like syntax to slice the images in order to obtain these grid cells. We've provided an example in `grid_image.py` which I'll show here:
 
-Then you can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
+```python
+import cv2
+import os
+
+imgpath = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                       "../images/leftturn_scene.jpg")
+img = cv2.imread(imgpath)
+
+grid_cell_w = 64*3
+grid_cell_h = 48*3
+
+cv2.namedWindow("my_window")
+
+# NumPy array slicing!!
+grid_cell = img[grid_cell_h:2*grid_cell_h,
+                grid_cell_w:2*grid_cell_w] 
+
+cv2.imshow("my_window", grid_cell)
+cv2.waitKey(0);
+```
+
+The object then is to decide which grid cells contain the region of interest. You can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
 
 ![][grid]
 [grid]: images/grid.png
 
-OpenCV has a method called `boundingRect` which seems promising too.  I found a nice example, albeit in C++, that [finds a bounding rectangle using a threshold mask](http://answers.opencv.org/question/4183/what-is-the-best-way-to-find-bounding-box-for-binary-mask/) like you have.  It seems like it will depend on your thresholding operation to be pretty clean (i.e. no spurious white points, the only object that should be unmasked is the sign of interest). 
+OpenCV has a method called `boundingRect` which seems promising too.  I found a nice example, albeit in C++, that [finds a bounding rectangle using a threshold mask](http://answers.opencv.org/question/4183/what-is-the-best-way-to-find-bounding-box-for-binary-mask/) like you have.  It seems like it will depend on your thresholding operation to be pretty clean (i.e. no spurious white points, the only object that should be unmasked is the sign of interest).
 
 ![][boundingRectStars]
 [boundingRectStars]: images/boundingRectStars.png
 
-The goal is to produce `pt1 = (x1, y1)` and `pt2 = (x2, y2)` that define the upperleft and lower right corners of the bounding box.  Remember that the quality of the bounding box you need to produce will depend on how robust later steps of your computer vision pipeline are. 
+The goal is to produce `left_top = (x1, y1)` and `right_bottom = (x2, y2)` that define the top left and bottom right corners of the bounding box.
 
 ## Recognition
 
