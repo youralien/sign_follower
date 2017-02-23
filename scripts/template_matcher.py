@@ -11,7 +11,10 @@ class TemplateMatcher(object):
         self.signs = {} #maps keys to the template images
         self.kps = {} #maps keys to the keypoints of the template images
         self.descs = {} #maps keys to the descriptors of the template images
-        self.sift = cv2.SIFT() #initialize SIFT to be used for image matching
+        if cv2.__version__=='3.1.0-dev':
+            self.sift = cv2.xfeatures2d.SIFT_create()
+        else:
+            self.sift = cv2.SIFT() #initialize SIFT to be used for image matching
 
         # for potential tweaking
         self.min_match_count = min_match_count
