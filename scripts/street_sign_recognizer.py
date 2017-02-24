@@ -35,10 +35,6 @@ class StreetSignRecognizer(object):
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
-        # creates a window and displays the image for X milliseconds
-        cv2.imshow('video_window', self.cv_image)
-        cv2.waitKey(5)
-
     def sign_bounding_box(self):
         """
         Returns
@@ -53,8 +49,13 @@ class StreetSignRecognizer(object):
 
     def run(self):
         """ The main run loop"""
-        r = rospy.Rate(5)
+        r = rospy.Rate(10)
         while not rospy.is_shutdown():
+            if not self.cv_image is None:
+                print "here"
+                # creates a window and displays the image for X milliseconds
+                cv2.imshow('video_window', self.cv_image)
+                cv2.waitKey(5)
             r.sleep()
 
 if __name__ == '__main__':
