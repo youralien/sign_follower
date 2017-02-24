@@ -116,10 +116,10 @@ Here's a callback that will help to display the RGB value when hovering over the
     def process_mouse_event(self, event, x,y,flags,param):
         """ Process mouse events so that you can see the color values associated
             with a particular pixel in the camera images """
-        image_info_window = 255*np.ones((500,500,3))
+        self.image_info_window = 255*np.ones((500,500,3))
 
         # show hsv values
-        cv2.putText(image_info_window,
+        cv2.putText(self.image_info_window,
                     'Color (h=%d,s=%d,v=%d)' % (self.hsv_image[y,x,0], self.hsv_image[y,x,1], self.hsv_image[y,x,2]),
                     (5,50), # 5 = x, 50 = y
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -127,20 +127,27 @@ Here's a callback that will help to display the RGB value when hovering over the
                     (0,0,0))
 
         # show bgr values
-        cv2.putText(image_info_window,
+        cv2.putText(self.image_info_window,
                     'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
                     (5,100),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
                     (0,0,0))
-        cv2.imshow('image_info', image_info_window)
-        cv2.waitKey(5)
 ```
 
 In the `__init__` method, connect this callback by adding the following line:
 
 ```python
+self.image_info_window = None
 cv2.setMouseCallback('video_window', self.process_mouse_event)
+```
+
+And add the following lines to your run loop:
+
+```python
+            if not self.image_info_window is None:
+                cv2.imshow('image_info', self.image_info_window)
+                cv2.waitKey(5)
 ```
 
 Now, if you hover over a certain part of the image, it will tell you what R, G, B value you are hovering over. Once you have created an HSV image, you can edit this function to also display the Hue, Saturation, and Value numbers.
