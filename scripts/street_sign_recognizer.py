@@ -7,6 +7,7 @@ import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
+import numpy as np
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
