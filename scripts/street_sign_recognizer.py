@@ -82,8 +82,9 @@ class StreetSignRecognizer(object):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
         self.bgr_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        self.hsv_image = cv2.cvtColor(cv2.GaussianBlur(self.bgr_image, \
-            (self.blur_amount, self.blur_amount), 0), cv2.COLOR_BGR2HSV)
+        self.blurred_bgr_image = cv2.GaussianBlur(self.bgr_image, \
+            (self.blur_amount, self.blur_amount), 0)
+        self.hsv_image = cv2.cvtColor(self.blurred_bgr_image, cv2.COLOR_BGR2HSV)
         self.filt_image = cv2.inRange(self.hsv_image, (self.h_lower_bound, self.s_lower_bound, \
             self.v_lower_bound), (self.h_upper_bound, self.s_upper_bound, self.v_upper_bound))
         left_top, right_bottom = self.sign_bounding_box()
@@ -103,10 +104,9 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        # contours, hierarchy = cv2.findContours(self.filt_image, cv2.RETR_TREE, \
-        #    cv2.CHAIN_APPROX_SIMPLE)
-        # x, y, w, h = cv2.boundingRect(contours[0])
-        x, y, w, h = 100, 100, 50, 50
+        contours, hierarchy = cv2.findContours(self.filt_image, cv2.RETR_TREE, \
+           cv2.CHAIN_APPROX_SIMPLE)
+        x, y, w, h = cv2.boundingRect(contours[0])
         left_top = (x, y)
         right_bottom = (x+w, y+h)
         return left_top, right_bottom
