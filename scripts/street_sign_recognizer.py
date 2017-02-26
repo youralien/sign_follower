@@ -19,12 +19,52 @@ class StreetSignRecognizer(object):
         self.cv_image = None                        # the latest image from the camera
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
+        cv2.namedWindow('hsv_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
+        cv2.namedWindow('threshold_image')
+        self.hsv_lb = np.array([26, 190, 195]) # hsv lower bound
+        #create trackbars
+        # cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
+        # cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
+        # cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
+        self.hsv_ub = np.array([30, 255, 255]) # hsv upper bound
+        #create trackbars
+        # cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
+        # cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
+        # cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
+
+    #set bounds based on trackbars
+
+    # def set_h_lb(self, val):
+    #     """ set hue lower bound """
+    #     self.hsv_lb[0] = val
+
+    # def set_s_lb(self, val):
+    #     """ set saturation lower bound """
+    #     self.hsv_lb[1] = val
+
+    # def set_v_lb(self, val):
+    #     """ set value lower bound """
+    #     self.hsv_lb[2] = val
+
+    # def set_h_ub(self, val):
+    #     """ set hue upper bound """
+    #     self.hsv_ub[0] = val
+
+    # def set_s_ub(self, val):
+    #     """ set saturation upper bound """
+    #     self.hsv_ub[1] = val
+
+    # def set_v_ub(self, val):
+    #     """ set value upper bound """
+    #     self.hsv_ub[2] = val
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV) #Convert to HSV
+        self.threshold_image = cv2.inRange(self.hsv_image,self.hsv_lb,self.hsv_ub) 
 
         left_top, right_bottom = self.sign_bounding_box()
         left, top = left_top
@@ -43,9 +83,12 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        # TODO: YOUR SOLUTION HERE
-        left_top = (200, 200)
-        right_bottom = (400, 400)
+        #draw bounding rectangle
+
+        x,y,w,h = cv2.boundingRect(self.threshold_image)
+
+        left_top = (x,y)
+        right_bottom = (x+w, y+h)
         return left_top, right_bottom
 
     def run(self):
@@ -56,6 +99,9 @@ class StreetSignRecognizer(object):
                 print "here"
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
+                cv2.imshow('hsv_window', self.hsv_image)
+                cv2.imshow('threshold_image', self.threshold_image)
+
                 cv2.waitKey(5)
             r.sleep()
 
