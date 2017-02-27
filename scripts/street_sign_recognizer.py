@@ -17,8 +17,12 @@ class StreetSignRecognizer(object):
         """ Initialize the street sign reocgnizer """
         rospy.init_node('street_sign_recognizer')
         self.cv_image = None                        # the latest image from the camera
+        self.hsv_img = None
+        self.binary_img = None
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
+        cv2.namedWindow('HSV_window')
+        cv2.namedWindow('binary_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
     def process_image(self, msg):
@@ -44,6 +48,11 @@ class StreetSignRecognizer(object):
             defining topleft and bottomright corners of the bounding box
         """
         # TODO: YOUR SOLUTION HERE
+        self.hsv_img = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
+
+        self.binary_img = cv2.inRange(self.hsv_img, self.min_thresh, self.max_thresh)
+
+
         left_top = (200, 200)
         right_bottom = (400, 400)
         return left_top, right_bottom
@@ -56,6 +65,8 @@ class StreetSignRecognizer(object):
                 print "here"
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
+                cv2.imshow('HSV_window', self.hsv_img)
+                cv2.imshow('binary_window', self.binary_img)
                 cv2.waitKey(5)
             r.sleep()
 

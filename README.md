@@ -56,36 +56,36 @@ You will implement code that will find the bounding box around the traffic sign 
 You will be writing all your image processing pipeline within the `process_image` callback function. Here is what the starter code looks like so far.
 
 ```python
-    def process_image(self, msg):
-        """ Process image messages from ROS and stash them in an attribute
-            called cv_image for subsequent processing """
-        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+def process_image(self, msg):
+    """ Process image messages from ROS and stash them in an attribute
+        called cv_image for subsequent processing """
+    self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
-        left_top, right_bottom = self.sign_bounding_box()
-        left, top = left_top
-        right, bottom = right_bottom
+    left_top, right_bottom = self.sign_bounding_box()
+    left, top = left_top
+    right, bottom = right_bottom
 
-        # crop bounding box region of interest
-        cropped_sign = self.cv_image[top:bottom, left:right]
+    # crop bounding box region of interest
+    cropped_sign = self.cv_image[top:bottom, left:right]
 
-        # draw bounding box rectangle
-        cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
+    # draw bounding box rectangle
+    cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 ```
 
 The goal of localizing the signs in the scene is to determine `left_top = (x1,y1)` and `right_bottom = (x2,y2)` points that define the upper lefthand corner and lower righthand corner of a bounding box around the sign. You can do most of your work in the instance method `sign_bounding_box`.
 
 ```python
-    def sign_bounding_box(self):
-        """
-        Returns
-        -------
-        (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
-            defining topleft and bottomright corners of the bounding box
-        """
-        # TODO: YOUR SOLUTION HERE
-        left_top = (200, 200)
-        right_bottom = (400, 400)
-        return left_top, right_bottom"
+def sign_bounding_box(self):
+    """
+    Returns
+    -------
+    (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
+        defining topleft and bottomright corners of the bounding box
+    """
+    # TODO: YOUR SOLUTION HERE
+    left_top = (200, 200)
+    right_bottom = (400, 400)
+    return left_top, right_bottom
 ```
 
 Whether you follow along with the suggested steps for creating a sign recognizer or have ideas of your own, revisit these questions often when designing your image processing pipeline:
@@ -113,26 +113,26 @@ Since the set of signs we are recognizing are all yellow, by design, we can hand
 Here's a callback that will help to display the RGB value when hovering over the image window with a mouse (Note: you get this behavior for free with OpenCV 3.1).
 
 ```python
-    def process_mouse_event(self, event, x,y,flags,param):
-        """ Process mouse events so that you can see the color values associated
-            with a particular pixel in the camera images """
-        self.image_info_window = 255*np.ones((500,500,3))
+def process_mouse_event(self, event, x,y,flags,param):
+    """ Process mouse events so that you can see the color values associated
+        with a particular pixel in the camera images """
+    self.image_info_window = 255*np.ones((500,500,3))
 
-        # show hsv values
-        cv2.putText(self.image_info_window,
-                    'Color (h=%d,s=%d,v=%d)' % (self.hsv_image[y,x,0], self.hsv_image[y,x,1], self.hsv_image[y,x,2]),
-                    (5,50), # 5 = x, 50 = y
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0,0,0))
+    # show hsv values
+    cv2.putText(self.image_info_window,
+                'Color (h=%d,s=%d,v=%d)' % (self.hsv_image[y,x,0], self.hsv_image[y,x,1], self.hsv_image[y,x,2]),
+                (5,50), # 5 = x, 50 = y
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0,0,0))
 
-        # show bgr values
-        cv2.putText(self.image_info_window,
-                    'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
-                    (5,100),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0,0,0))
+    # show bgr values
+    cv2.putText(self.image_info_window,
+                'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
+                (5,100),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0,0,0))
 ```
 
 In the `__init__` method, connect this callback by adding the following line:
@@ -145,9 +145,9 @@ cv2.setMouseCallback('video_window', self.process_mouse_event)
 And add the following lines to your run loop:
 
 ```python
-            if not self.image_info_window is None:
-                cv2.imshow('image_info', self.image_info_window)
-                cv2.waitKey(5)
+if not self.image_info_window is None:
+    cv2.imshow('image_info', self.image_info_window)
+    cv2.waitKey(5)
 ```
 
 Now, if you hover over a certain part of the image, it will tell you what R, G, B value you are hovering over. Once you have created an HSV image, you can edit this function to also display the Hue, Saturation, and Value numbers.
@@ -156,43 +156,43 @@ OpenCV windows can be pretty powerful when setting up interactive sliders to cha
 
 In the `__init__` method, copy the following lines which
 ```python
-            cv2.namedWindow('threshold_image')
-            self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
-            cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
-            cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
-            cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
-            self.hsv_ub = np.array([255, 255, 255]) # hsv upper bound
-            cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
-            cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
-            cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
+cv2.namedWindow('threshold_image')
+self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
+cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
+cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
+cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
+self.hsv_ub = np.array([255, 255, 255]) # hsv upper bound
+cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
+cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
+cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
 ```
 
 Then, add the following callback methods to the class definition that respond to changes in the trackbar sliders
 
 ```python
-    def set_h_lb(self, val):
-        """ set hue lower bound """
-        self.hsv_lb[0] = val
+def set_h_lb(self, val):
+    """ set hue lower bound """
+    self.hsv_lb[0] = val
 
-    def set_s_lb(self, val):
-        """ set saturation lower bound """
-        self.hsv_lb[1] = val
+def set_s_lb(self, val):
+    """ set saturation lower bound """
+    self.hsv_lb[1] = val
 
-    def set_v_lb(self, val):
-        """ set value lower bound """
-        self.hsv_lb[2] = val
+def set_v_lb(self, val):
+    """ set value lower bound """
+    self.hsv_lb[2] = val
 
-    def set_h_ub(self, val):
-        """ set hue upper bound """
-        self.hsv_ub[0] = val
+def set_h_ub(self, val):
+    """ set hue upper bound """
+    self.hsv_ub[0] = val
 
-    def set_s_ub(self, val):
-        """ set saturation upper bound """
-        self.hsv_ub[1] = val
+def set_s_ub(self, val):
+    """ set saturation upper bound """
+    self.hsv_ub[1] = val
 
-    def set_v_ub(self, val):
-        """ set value upper bound """
-        self.hsv_ub[2] = val
+def set_v_ub(self, val):
+    """ set value upper bound """
+    self.hsv_ub[2] = val
 ```
 
 The sliders will help set the hsv lower and upper bound limits (`self.hsv_lb` and `self.hsv_ub`), which you can then use as limits for filtering certain parts of the HSV spectrum. Check out the OpenCV [inRange method](http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_colorspaces/py_colorspaces.html) for more details on how to threshold an image for a range of a particular color.
