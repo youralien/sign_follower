@@ -9,21 +9,24 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 
+
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
-
 
     def __init__(self):
         """ Initialize the street sign reocgnizer """
         rospy.init_node('street_sign_recognizer')
-        self.cv_image = None                        # the latest image from the camera
+        self.cv_image = None  # the latest image from the camera
         self.hsv_img = None
         self.binary_img = None
-        self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
+        self.bridge = CvBridge()  # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
         cv2.namedWindow('HSV_window')
         cv2.namedWindow('binary_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
+
+        self.hsv_min = (20, 200, 200)
+        self.hsv_max = (40, 255, 255)
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
@@ -50,8 +53,7 @@ class StreetSignRecognizer(object):
         # TODO: YOUR SOLUTION HERE
         self.hsv_img = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
 
-        self.binary_img = cv2.inRange(self.hsv_img, self.min_thresh, self.max_thresh)
-
+        self.binary_img = cv2.inRange(self.hsv_img, self.hsv_min, self.hsv_max)
 
         left_top = (200, 200)
         right_bottom = (400, 400)
@@ -61,14 +63,17 @@ class StreetSignRecognizer(object):
         """ The main run loop"""
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
-            if not self.cv_image is None:
-                print "here"
+            if self.cv_image is not None:
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
                 cv2.imshow('HSV_window', self.hsv_img)
                 cv2.imshow('binary_window', self.binary_img)
                 cv2.waitKey(5)
-            r.sleep()
+            try:
+                r.sleep()
+            except rospy.exceptions.ROSTimeMovedBackwardsException:
+                print "detected timeskip"
+
 
 if __name__ == '__main__':
     node = StreetSignRecognizer()
