@@ -26,8 +26,23 @@ class StreetSignRecognizer(object):
         cv2.namedWindow('binary_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
-        self.hsv_min = (20, 200, 200)
-        self.hsv_max = (40, 255, 255)
+        self.hsv_min = np.array((20, 200, 200))
+        self.hsv_max = np.array((40, 255, 255))
+
+        self.make_multi_slider(self.hsv_min, "min ")
+        self.make_multi_slider(self.hsv_max, "max ")
+
+    @staticmethod
+    def make_multi_slider(array, prefix="", window='binary_window', names='H S V'.split(), max=255):
+        assert len(array) == len(names)
+
+        def make_callback(local_i):
+            def cb(val):
+                array[local_i] = val
+            return cb
+
+        for i in range(len(array)):
+            cv2.createTrackbar(prefix + names[i], window, array[i], max, make_callback(i))
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
