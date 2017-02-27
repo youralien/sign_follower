@@ -3,6 +3,7 @@
 """ This is a script that walks through some of the basics of working with images
     with opencv in ROS. """
 
+import time
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -61,7 +62,6 @@ class StreetSignRecognizer(object):
 
     def run(self):
         """ The main run loop"""
-        r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if self.cv_image is not None:
                 # creates a window and displays the image for X milliseconds
@@ -69,10 +69,8 @@ class StreetSignRecognizer(object):
                 cv2.imshow('HSV_window', self.hsv_img)
                 cv2.imshow('binary_window', self.binary_img)
                 cv2.waitKey(5)
-            try:
-                r.sleep()
-            except rospy.exceptions.ROSTimeMovedBackwardsException:
-                print "detected timeskip"
+
+            time.sleep(0.1)
 
 
 if __name__ == '__main__':
