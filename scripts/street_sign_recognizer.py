@@ -8,6 +8,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from template_matcher import TemplateMatcher
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -100,5 +101,24 @@ class StreetSignRecognizer(object):
             r.sleep()
 
 if __name__ == '__main__':
-    node = StreetSignRecognizer()
-    node.run()
+    # node = StreetSignRecognizer()
+    # node.run()
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+
+    tm = TemplateMatcher(images)
+
+    scenes = [
+        "../images/uturn_scene.jpg",
+        "../images/leftturn_scene.jpg",
+        "../images/rightturn_scene.jpg"
+    ]
+
+    for filename in scenes:
+        scene_img = cv2.imread(filename, 0)
+        pred = tm.predict(scene_img)
+        print filename.split('/')[-1]
+        print pred

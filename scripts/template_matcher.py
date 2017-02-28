@@ -20,8 +20,13 @@ class TemplateMatcher(object):
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
 
-        #TODO: precompute keypoints for template images
+        #TODONE: precompute keypoints for template images
+        for k, filename in images.iteritems():
+            # load template sign images as grayscale
+            self.signs[k] = cv2.imread(filename,0)
 
+            # precompute keypoints and descriptors for the template sign 
+            self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
 
     def predict(self, img):
         """
@@ -30,9 +35,10 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
+        # TODONE: get keypoints and descriptors from input image using SIFT
         #       store keypoints in variable kp and descriptors in des
-
+        kp, des = self.sift.detectAndCompute(img,None)
+        
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
