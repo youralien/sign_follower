@@ -8,6 +8,7 @@ an input image the best using the SIFT algorithm
 class TemplateMatcher(object):
 
     def __init__ (self, images, min_match_count=10, good_thresh=0.7):
+        print 'TM init'
         self.signs = {} #maps keys to the template images
         self.kps = {} #maps keys to the keypoints of the template images
         self.descs = {} #maps keys to the descriptors of the template images
@@ -20,8 +21,13 @@ class TemplateMatcher(object):
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
 
-        #TODO: precompute keypoints for template images
+        #TODONE: precompute keypoints for template images
+        for k, filename in images.iteritems():
+            # load template sign images as grayscale
+            self.signs[k] = cv2.imread(filename,0)
 
+            # precompute keypoints and descriptors for the template sign 
+            self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
 
     def predict(self, img):
         """
@@ -30,9 +36,10 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
+        # TODONE: get keypoints and descriptors from input image using SIFT
         #       store keypoints in variable kp and descriptors in des
-
+        kp, des = self.sift.detectAndCompute(img,None)
+        
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
@@ -71,3 +78,27 @@ class TemplateMatcher(object):
 
 def compare_images(img1, img2):
     return 0
+
+if __name__ == '__main__':
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+    print 'images done'
+
+    tm = TemplateMatcher(images)
+
+    print 'tm for those images done'
+
+    scenes = [
+        "../images/uturn_scene.jpg",
+        "../images/leftturn_scene.jpg",
+        "../images/rightturn_scene.jpg"
+    ]
+
+    for filename in scenes:
+        scene_img = cv2.imread(filename, 0)
+        pred = tm.predict(scene_img)
+        print filename.split('/')[-1]
+        print pred
