@@ -33,6 +33,30 @@ class StreetSignRecognizer(object):
         cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
         cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
 
+    def set_h_lb(self, val):
+        """ set hue lower bound """
+        self.hsv_lb[0] = 16
+
+    def set_s_lb(self, val):
+        """ set saturation lower bound """
+        self.hsv_lb[1] = 196
+
+    def set_v_lb(self, val):
+        """ set value lower bound """
+        self.hsv_lb[2] = 210
+
+    def set_h_ub(self, val):
+        """ set hue upper bound """
+        self.hsv_ub[0] = 38
+
+    def set_s_ub(self, val):
+        """ set saturation upper bound """
+        self.hsv_ub[1] = 255
+
+    def set_v_ub(self, val):
+        """ set value upper bound """
+        self.hsv_ub[2] = 227
+
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
