@@ -17,14 +17,17 @@ class StreetSignRecognizer(object):
         """ Initialize the street sign reocgnizer """
         rospy.init_node('street_sign_recognizer')
         self.cv_image = None                        # the latest image from the camera
+        self.hsv_image = None
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
+        cv2.namedWindow('hsv_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
 
         left_top, right_bottom = self.sign_bounding_box()
         left, top = left_top
@@ -56,6 +59,7 @@ class StreetSignRecognizer(object):
                 print "here"
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
+                cv2.imshow('hsv_window', self.hsv_image)
                 cv2.waitKey(5)
             r.sleep()
 
