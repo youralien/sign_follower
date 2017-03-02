@@ -67,7 +67,7 @@ class StreetSignRecognizer(object):
         right_bottom = (400, 400)
         return left_top, right_bottom
 
-    def process_mouse_events(self, event, x, y, flags, param):
+    def process_mouse_event(self, event, x, y, flags, param):
         """ Process mouse events so that you can see the color values associated
             with a particular pixel in the camera images """
         self.image_info_window = 255 * np.ones((500, 500, 3))
