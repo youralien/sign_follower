@@ -45,7 +45,7 @@ class StreetSignRecognizer(object):
         self.binary_image = cv2.inRange(self.hsv_image,
                                         (self.hsv_lb[0], self.hsv_lb[1], self.hsv_lb[2]),
                                         (self.hsv_ub[0], self.hsv_ub[1], self.hsv_ub[2]))
-
+        print self.binary_image
         left_top, right_bottom = self.sign_bounding_box()
         left, top = left_top
         right, bottom = right_bottom
@@ -64,6 +64,11 @@ class StreetSignRecognizer(object):
             defining topleft and bottomright corners of the bounding box
         """
         # TODO: YOUR SOLUTION HERE
+        grid_cell_w = 64*2
+        grid_cell_h = 48*2
+
+        
+
         left_top = (200, 200)
         right_bottom = (400, 400)
         return left_top, right_bottom
