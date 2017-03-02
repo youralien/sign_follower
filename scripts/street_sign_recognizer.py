@@ -42,7 +42,7 @@ class StreetSignRecognizer(object):
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
         self.binary_image = cv2.inRange(self.hsv_image,
-                                        (self.hsv_lb[0], self.hsv_lb[1]], self.hsv_lb[2]),
+                                        (self.hsv_lb[0], self.hsv_lb[1], self.hsv_lb[2]),
                                         (self.hsv_ub[0], self.hsv_ub[1], self.hsv_ub[2]))
 
         left_top, right_bottom = self.sign_bounding_box()
