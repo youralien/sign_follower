@@ -25,13 +25,13 @@ class StreetSignRecognizer(object):
         cv2.namedWindow('hsv_window')
         cv2.namedWindow('threshold_image')
         self.hsv_lb = np.array([15, 200, 200]) # hsv lower bound
-        cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
-        cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
-        cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
+        cv2.createTrackbar('H lb', 'threshold_image', self.hsv_lb[0], 255, self.set_h_lb)
+        cv2.createTrackbar('S lb', 'threshold_image', self.hsv_lb[1], 255, self.set_s_lb)
+        cv2.createTrackbar('V lb', 'threshold_image', self.hsv_lb[2], 255, self.set_v_lb)
         self.hsv_ub = np.array([45, 255, 255]) # hsv upper bound
-        cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
-        cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
-        cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
+        cv2.createTrackbar('H ub', 'threshold_image', self.hsv_ub[0], 255, self.set_h_ub)
+        cv2.createTrackbar('S ub', 'threshold_image', self.hsv_ub[1], 255, self.set_s_ub)
+        cv2.createTrackbar('V ub', 'threshold_image', self.hsv_ub[2], 255, self.set_v_ub)
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
         self.image_info_window = None
         cv2.setMouseCallback('video_window', self.process_mouse_event)
