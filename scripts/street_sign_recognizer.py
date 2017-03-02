@@ -8,6 +8,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from copy import deepcopy
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -63,7 +64,7 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        img = self.binary_image # make copy because findContours modifies the image
+        img = deepcopy(self.binary_image) # findContours modifies the image
         contours = cv2.findContours(img, 1, 2)
         contour = contours[0]
         x,y,w,h = cv2.boundingRect(contour)
