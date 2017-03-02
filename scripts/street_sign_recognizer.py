@@ -18,6 +18,7 @@ class StreetSignRecognizer(object):
         rospy.init_node('street_sign_recognizer')
         self.cv_image = None                        # the latest image from the camera
         self.hsv_image = None
+        self.binary_image = None
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
         cv2.namedWindow('hsv_window')
@@ -122,6 +123,7 @@ class StreetSignRecognizer(object):
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
                 cv2.imshow('hsv_window', self.hsv_image)
+                cv2.imshow('threshold_image', self.binary_image)
                 cv2.waitKey(5)
             if not self.image_info_window is None:
                 cv2.imshow('image_info', self.image_info_window)
