@@ -64,7 +64,7 @@ class StreetSignRecognizer(object):
             defining topleft and bottomright corners of the bounding box
         """
         # TODO: YOUR SOLUTION HERE
-        contours = cv2.findContours(self.binary_image, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE)
+        contours = cv2.findContours(self.binary_image, cv2.CV_RETR_LIST, cv2.CV_CHAIN_APPROX_SIMPLE)
         countour = contours[0]
         x,y,w,h = cv2.boundingRect(contour)
         left_top = (x, y)
