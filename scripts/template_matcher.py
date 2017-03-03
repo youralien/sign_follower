@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 """
 This code determines which of a set of template images matches
@@ -19,7 +20,9 @@ class TemplateMatcher(object):
         # for potential tweaking
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
+        self.ransac_thresh = 5.0 # use for homography
 
+        self.bf = cv2.BFMatcher()
         #TODONE: precompute keypoints for template images
         for k, filename in images.iteritems():
             # load template sign images as grayscale
@@ -34,7 +37,7 @@ class TemplateMatcher(object):
         returns a dictionary, keys being signs, values being confidences
         """
         visual_diff = {}
-
+        template_confidence = {}
         # TODONE: get keypoints and descriptors from input image using SIFT
         #       store keypoints in variable kp and descriptors in des
         kp, des = self.sift.detectAndCompute(img,None)
@@ -44,19 +47,20 @@ class TemplateMatcher(object):
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
-            pass
-            # TODO: convert difference between images (from visual_diff)
+            # TODONE: convert difference between images (from visual_diff)
             #       to confidence values (stored in template_confidence)
+            for k in visual_diff:
+                template_confidence[k] = 1/visual_diff[k]
 
+            factor = 1.0/sum(template_confidence.itervalues())
+            for k in template_confidence:
+                template_confidence[k] *= factor
+        
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
             
-        #TODO: delete line below once the if statement is written
-        template_confidence = {k: 0 for k in self.signs.keys()}
-
         return template_confidence
-
 
     def _compute_prediction(self, k, img, kp, des):
         """
@@ -65,15 +69,41 @@ class TemplateMatcher(object):
         kp: keypoints from scene image,   des: descriptors from scene image
         """
 
-        # TODO: find corresponding points in the input image and the templae image
+        # TODONE: find corresponding points in the input image and the template image
         #       put keypoints from template image in template_pts
         #       put corresponding keypoints from input image in img_pts
+        
+        # BFMatcher with default params
+        matches = self.bf.knnMatch(self.descs[k], des, k=2)
+        # Apply ratio test and add the matches with high probability (low matches)
+        good = []
+        for m,n in matches:
+            if m.distance < 0.75*n.distance:
+                good.append(m)
 
+        # Code from: http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_feature_homography/py_feature_homography.html
+        img_pts = np.float32([ kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+        template_pts = np.float32([ self.kps[k][m.queryIdx].pt for m in good ]).reshape(-1,1,2)
 
-        #TODO: change img to img_T once you do the homography transform
-        visual_diff = compare_images(img, self.signs[k])
+        # Transform input image so that it matches the template image as well as possible
+        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
+        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+        
+        # cv2.namedWindow('warp_img_window')
+        # cv2.imshow('warp_img_window', img_T)
+        # cv2.waitKey(1000)
+
+        #TODONE: change img to img_T once you do the homography transform
+        visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
-    return 0
+    # Normalize images for lighting
+    img1_norm = (img1-np.mean(img1))/np.std(img1)
+    img2_norm = (img2-np.mean(img2))/np.std(img2)
+    
+    # Eucleadian distance between two matricies
+    img_diff = np.subtract(img1_norm, img2_norm)
+    dist = np.linalg.norm(img_diff) 
+    return dist
