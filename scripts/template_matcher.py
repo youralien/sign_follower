@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import math
 import sys
+import time
 
 """
 This code determines which of a set of template images matches
@@ -17,12 +18,14 @@ class TemplateMatcher(object):
 
         self.sift = cv2.xfeatures2d.SIFT_create()
 
+        self.img_T = None
+
 
         #TODO: what do these do?
         # for potential tweaking
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
-        self.ransac_thresh = 9
+        self.ransac_thresh = 5
 
         for k, filename in images.iteritems():
             # load template sign images as grayscale
@@ -30,6 +33,8 @@ class TemplateMatcher(object):
 
             # precompute keypoints and descriptors for the template sign
             self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
+
+
 
     def predict(self, img):
         """
@@ -41,11 +46,14 @@ class TemplateMatcher(object):
         kp, des = self.sift.detectAndCompute(img, None)
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
-            visual_diff[k] = self._compute_prediction(k, img, kp, des)
+            difference = self._compute_prediction(k, img, kp, des)
+            if difference is None:
+                difference = np.inf
+            visual_diff[k] = difference
 
         if visual_diff:
-            for k in visual_diff.keys():
-                print visual_diff[k]
+            # for k in visual_diff.keys():
+            #     print visual_diff[k]
 
             template_confidence = {k:1/visual_diff[k] for k in visual_diff.keys()}
             temp_sum = np.sum(template_confidence.values())
@@ -56,6 +64,8 @@ class TemplateMatcher(object):
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
 
+        # signs = [(k, template_confidence[k]) for k in self.signs.keys() if template_confidence[k] > self.good_thresh]
+        # sign = sorted(signs, key=lambda x: x[1], reverse=True)
         return template_confidence
 
 
@@ -66,31 +76,33 @@ class TemplateMatcher(object):
         kp: keypoints from scene image,   des: descriptors from scene image
         """
 
-        # TODO: compare descriptors
         template_pts = []
         img_pts = []
-        distance = sys.maxint
+        similarity = sys.maxint
         current_kp = None
-        for temp_keypt in self.kps[k]:
-            for input_keypt in kp:
-                temp = np.sqrt(np.square(input_keypt.pt[0] - temp_keypt.pt[0]) + np.square(input_keypt.pt[1] - temp_keypt.pt[1]))
-                if(distance > temp):
-                    distance = temp
-                    current_kp = input_keypt
+        for i in range(len(self.kps[k])):
+            for j in range(len(kp)):
+                temp = np.sum(abs(des[j] - self.descs[k][i]))
+                if(similarity > temp):
+                    similarity = temp
+                    current_kp = kp[j]
 
-            if(distance != sys.maxint):
-                template_pts.append(temp_keypt.pt)
+            if(similarity != sys.maxint):
+                template_pts.append(self.kps[k][i].pt)
                 img_pts.append(current_kp.pt)
-                distance = sys.maxint
-        # cv2.drawMatches(img, img_pts, self.signs[k], template_pts)
-
-        img_pts = np.asarray(img_pts, dtype=float)
-        template_pts = np.asarray(template_pts, dtype=float)
-        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
-        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
-
-        visual_diff = compare_images(img_T, self.signs[k])
-        return visual_diff
+                similarity = sys.maxint
+        if img_pts >= self.min_match_count:
+            img_pts = np.asarray(img_pts, dtype=float)
+            template_pts = np.asarray(template_pts, dtype=float)
+            M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
+            self.img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+            # cv2.imshow("img_T", tm.img_T)
+            # cv2.waitKey(5)
+            # time.sleep(5)
+            visual_diff = compare_images(self.img_T, self.signs[k])
+            return visual_diff
+        else:
+            return None
 
 # end of TemplateMatcher class
 
@@ -122,9 +134,11 @@ if __name__ == '__main__':
     "../images/leftturn_scene.jpg",
     "../images/rightturn_scene.jpg"
     ]
-
+    # cv2.namedWindow("img_T")
     for filename in scenes:
         scene_img = cv2.imread(filename, 0)
         pred = tm.predict(scene_img)
+
         print filename.split('/')[-1]
         print pred
+        print ' '

@@ -8,6 +8,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from template_matcher import TemplateMatcher
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -16,31 +17,43 @@ class StreetSignRecognizer(object):
     def __init__(self):
         """ Initialize the street sign reocgnizer """
         rospy.init_node('street_sign_recognizer')
-        self.image = None
-        self.cv_image = None                        # the latest image from the camera
-        self.hsv_image = None
-        self.binary_image = None
-        self.grid_cell = None
-        self.density = 0
-        self.threshold = .5
+
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
 
+
+        self.image = None                           # the latest image from the camera
+        self.cv_image = None                        # gaussian blurred image
+        self.hsv_image = None                       # HSV form of image
+        self.binary_image = None                    # Binary form of image
+        self.grid_cell = None                       # portion of an image
+
+        self.density = 0                            # amount of white in a grid cell
+        self.threshold = .1                         # amount of white needed in a grid cell to be part of sign
+
+        #the thresholds to find the yellow color of the sign
+        self.hsv_lb = np.array([17, 161, 160]) # hsv lower bound
+        self.hsv_ub = np.array([75, 255, 255]) # hsv upper bound
+
+        # the various windows
         cv2.namedWindow('HSV_window')
-        rospy.Subscriber("/camera/image_raw", Image, self.process_image)
         cv2.namedWindow('Binary_window')
         cv2.namedWindow('RGB_window')
 
 
 
+        images = {
+            "left": '../images/leftturn_box_small.png',
+            "right": '../images/rightturn_box_small.png',
+            "uturn": '../images/uturn_box_small.png'
+        }
 
-        self.hsv_lb = np.array([17, 161, 160]) # hsv lower bound
-        # cv2.createTrackbar('H lb', 'Binary_window', 0, 255, self.set_h_lb)
-        # cv2.createTrackbar('S lb', 'Binary_window', 0, 255, self.set_s_lb)
-        # cv2.createTrackbar('V lb', 'Binary_window', 0, 255, self.set_v_lb)
-        self.hsv_ub = np.array([75, 255, 255]) # hsv upper bound
-        # cv2.createTrackbar('H ub', 'Binary_window', 0, 255, self.set_h_ub)
-        # cv2.createTrackbar('S ub', 'Binary_window', 0, 255, self.set_s_ub)
-        # cv2.createTrackbar('V ub', 'Binary_window', 0, 255, self.set_v_ub)
+        self.matcher = TemplateMatcher(images)
+        self.matched_threshold = 10
+        self.total_confidence = {'uturn': 0.0, 'left': 0.0, 'right':0.0}
+        self.recognized = False
+
+        rospy.Subscriber("/camera/image_raw", Image, self.process_image)
+
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
@@ -64,12 +77,29 @@ class StreetSignRecognizer(object):
             self.center_x, self.center_y = moments['m10']/moments['m00'], moments['m01']/moments['m00']
 
         self.imagesum = np.sum(self.binary_image)
-        self.imagesum /= (255.0*3)
+        self.imagesum /= (255.0)
         self.imagesum /= (640.0)
         self.imagesum *= 10
 
 
         cv2.circle(self.image, (int(self.center_x), int(self.center_y)), int(self.imagesum), (128, 255, 128), thickness=-1)
+
+        detected_sign = self.image[top:bottom, left:right]
+        gray_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+
+
+        if not self.recognized and detected_sign != []:
+            sign_confidences = self.matcher.predict(gray_image)
+            for sign, confidence in sign_confidences.items():
+                self.total_confidence[sign] += confidence
+
+            for sign, tot_confidence in self.total_confidence.items():
+                if tot_confidence > self.matched_threshold:
+                    print "I know what this is! It's a", sign, "sign!"
+                    self.recognized = True
+                    break
+
+
 
     def sign_bounding_box(self):
         """
@@ -88,11 +118,9 @@ class StreetSignRecognizer(object):
                 grid_cell_x = 64*(c-1)
                 grid_cell_y = 48*(r-1)
                 grid_cell = self.binary_image[grid_cell_y:grid_cell_y+48, grid_cell_x:grid_cell_x+64]
-                print grid_cell.shape
                 self.density = np.sum(grid_cell)
                 self.density /= (255.0*48*64)
-                print self.density
-                if(self.density > .07):
+                if(self.density > self.threshold):
                     if(grid_cell_x < left_top[0] or grid_cell_y < left_top[1]):
                         left_top = (grid_cell_x, grid_cell_y)
                     if((grid_cell_x+64) > right_bottom[0] or (grid_cell_y+48) > right_bottom[1]):
@@ -106,37 +134,11 @@ class StreetSignRecognizer(object):
 
         return left_top, right_bottom
 
-
-    def set_h_lb(self, val):
-        """ set hue lower bound """
-        self.hsv_lb[0] = val
-
-    def set_s_lb(self, val):
-        """ set saturation lower bound """
-        self.hsv_lb[1] = val
-
-    def set_v_lb(self, val):
-        """ set value lower bound """
-        self.hsv_lb[2] = val
-
-    def set_h_ub(self, val):
-        """ set hue upper bound """
-        self.hsv_ub[0] = val
-
-    def set_s_ub(self, val):
-        """ set saturation upper bound """
-        self.hsv_ub[1] = val
-
-    def set_v_ub(self, val):
-        """ set value upper bound """
-        self.hsv_ub[2] = val
-
     def run(self):
         """ The main run loop"""
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.image is None:
-                print "here"
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('HSV_window', self.hsv_image)
                 cv2.imshow('Binary_window', self.binary_image)
@@ -144,9 +146,6 @@ class StreetSignRecognizer(object):
 
                 cv2.waitKey(5)
             r.sleep()
-
-
-
 
 
 if __name__ == '__main__':
