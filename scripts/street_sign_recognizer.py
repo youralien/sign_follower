@@ -60,32 +60,21 @@ class StreetSignRecognizer(Color_Slider, object):
         """
         # TODO: YOUR SOLUTION HERE
 
+        # set level of connectivity
         connectivity = 4
-        # Perform the operation
+
+        # comute connected regions
         output = cv2.connectedComponentsWithStats(self.binary_image, connectivity, cv2.CV_32S)
-        # Get the results
-        # The first cell is the number of labels
-        num_labels = output[0]
-        # The second cell is the label matrix
-        labels = output[1]
         # The third cell is the stat matrix
         stats = output[2]
-        # The fourth cell is the centroid matrix
-        centroids = output[3]
 
-        # print num_labels
-        # print labels
-
-        # print stats[1:,4]
+        # get row index of second highest conneted region
         idx = np.argmax(stats[1:,4]) + 1
-        # for i in range(num_labels):
-        #     print i, stats[i, cv2.CC_STAT_AREA]
+
+        # extract the bounding box
         left_top = (stats[idx, cv2.CC_STAT_LEFT], stats[idx, cv2.CC_STAT_TOP])
         right_bottom = (stats[idx, cv2.CC_STAT_LEFT] + stats[idx, cv2.CC_STAT_WIDTH], stats[idx, cv2.CC_STAT_TOP] + stats[idx, cv2.CC_STAT_HEIGHT])
 
-
-        # left_top = (200, 200)
-        # right_bottom = (400, 400)
         return left_top, right_bottom
 
 
