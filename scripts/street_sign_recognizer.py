@@ -80,9 +80,9 @@ class StreetSignRecognizer(Color_Slider, object):
 
         # extract smallest square feature, also removes stand
         if h > w:
-            h = w
-        elif w > h:
             w = h
+        elif w > h:
+            h = w
 
         # calculate bounding box position
         left_top = (x, y)
