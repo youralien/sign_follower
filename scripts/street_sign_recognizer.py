@@ -26,6 +26,7 @@ class StreetSignRecognizer(Color_Slider, object):
         cv2.namedWindow('video_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
+        # uncomment for viewing hsv values in image
         # self.image_info_window = None
         # cv2.setMouseCallback('video_window', self.process_mouse_event)
 
@@ -72,8 +73,20 @@ class StreetSignRecognizer(Color_Slider, object):
         idx = np.argmax(stats[1:,4]) + 1
 
         # extract the bounding box
-        left_top = (stats[idx, cv2.CC_STAT_LEFT], stats[idx, cv2.CC_STAT_TOP])
-        right_bottom = (stats[idx, cv2.CC_STAT_LEFT] + stats[idx, cv2.CC_STAT_WIDTH], stats[idx, cv2.CC_STAT_TOP] + stats[idx, cv2.CC_STAT_HEIGHT])
+        x = stats[idx, cv2.CC_STAT_LEFT]
+        y = stats[idx, cv2.CC_STAT_TOP]
+        h = stats[idx, cv2.CC_STAT_HEIGHT]
+        w = stats[idx, cv2.CC_STAT_WIDTH]
+
+        # extract smallest square feature, also removes stand
+        if h > w:
+            h = w
+        elif w > h:
+            w = h
+
+        # calculate bounding box position
+        left_top = (x, y)
+        right_bottom = (x + w, y + h)
 
         return left_top, right_bottom
 
