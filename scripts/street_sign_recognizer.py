@@ -6,6 +6,7 @@
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+from HSVSliderWindow import HSVSliderWindow
 import cv2
 import numpy as np
 
@@ -26,7 +27,7 @@ class StreetSignRecognizer(object):
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
-        left_top, right_bottom = self.sign_bounding_box()
+        left_top, right_bottom = self.sign_bounding_box(self.cv_image)
         left, top = left_top
         right, bottom = right_bottom
 
@@ -36,26 +37,30 @@ class StreetSignRecognizer(object):
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
-    def sign_bounding_box(self):
+    def filter_image(self, image):
+        return cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    def sign_bounding_box(self, image):
         """
         Returns
         -------
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        # TODO: YOUR SOLUTION HERE
         left_top = (200, 200)
         right_bottom = (400, 400)
         return left_top, right_bottom
 
     def run(self):
         """ The main run loop"""
+
+        slider_window = HSVSliderWindow()
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.cv_image is None:
                 print "here"
-                # creates a window and displays the image for X milliseconds
-                cv2.imshow('video_window', self.cv_image)
+                filtered_image = self.filter_image(self.cv_image)
+                cv2.imshow('video_window', filtered_image)
                 cv2.waitKey(5)
             r.sleep()
 
