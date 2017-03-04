@@ -22,7 +22,6 @@ class TemplateMatcher(object):
 
         #TODO: precompute keypoints for template images
 
-
     def predict(self, img):
         """
         Uses gather predictions to get visual diffs of the image to each template
@@ -45,7 +44,7 @@ class TemplateMatcher(object):
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
-            
+
         #TODO: delete line below once the if statement is written
         template_confidence = {k: 0 for k in self.signs.keys()}
 
@@ -71,3 +70,24 @@ class TemplateMatcher(object):
 
 def compare_images(img1, img2):
     return 0
+
+if __name__ == '__main__':
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+
+    tm = TemplateMatcher(images)
+
+    scenes = [
+    "../images/uturn_scene.jpg",
+    "../images/leftturn_scene.jpg",
+    "../images/rightturn_scene.jpg"
+    ]
+
+    for filename in scenes:
+        scene_img = cv2.imread(filename, 0)
+        pred = tm.predict(scene_img)
+        print filename.split('/')[-1]
+        print pred
