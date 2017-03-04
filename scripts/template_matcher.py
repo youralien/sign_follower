@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 """
 This code determines which of a set of template images matches
@@ -7,7 +8,7 @@ an input image the best using the SIFT algorithm
 
 class TemplateMatcher(object):
 
-    def __init__ (self, images, min_match_count=10, good_thresh=0.7):
+    def __init__ (self, images, min_match_count=10, ransac_thresh=0.7):
         self.signs = {} #maps keys to the template images
         self.kps = {} #maps keys to the keypoints of the template images
         self.descs = {} #maps keys to the descriptors of the template images
@@ -18,7 +19,7 @@ class TemplateMatcher(object):
 
         # for potential tweaking
         self.min_match_count = min_match_count
-        self.good_thresh = good_thresh #use for keypoint threshold
+        self.ransac_thresh = ransac_thresh #use for keypoint threshold
 
         #TODO: precompute keypoints for template images
         for k, filename in images.iteritems():
@@ -38,9 +39,11 @@ class TemplateMatcher(object):
         # TODO: get keypoints and descriptors from input image using SIFT
         #       store keypoints in variable kp and descriptors in des
 
+        kp, des = self.sift.detectAndCompute(img,None)
+
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
-            visual_diff[k] = self._compute_prediction(k, img, self.kps[k], self.descs[k])
+            visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
             pass
@@ -68,7 +71,24 @@ class TemplateMatcher(object):
         #       put keypoints from template image in template_pts
         #       put corresponding keypoints from input image in img_pts
         # Transform input image so that it matches the template image as well as possible
-        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
+
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+        matches = flann.knnMatch(self.descs[k], des,k=2)
+
+        good = []
+        for m,n in matches:
+            if m.distance < 0.7*n.distance:
+                good.append(m)
+
+        src_pts = np.float32([ self.kps[k][m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+        dst_pts = np.float32([ kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+
+        # if len(good)>MIN_MATCH_COUNT:
+        M, mask = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, self.ransac_thresh)
         img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
         #TODO: change img to img_T once you do the homography transform
