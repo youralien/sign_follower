@@ -9,14 +9,21 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 from color_slider import Color_Slider
+from template_matcher import TemplateMatcher
 
-class StreetSignRecognizer(Color_Slider, object):
+class StreetSignRecognizer(TemplateMatcher, Color_Slider, object):
     """ This robot should recognize street signs """
 
 
-    def __init__(self):
+    def __init__(self, images):
         """ Initialize the street sign reocgnizer """
-        #
+
+
+        super(StreetSignRecognizer, self).__init__(images=images)
+        # initialize the template matcher
+
+
+
         # initialize the color slider
         # super(StreetSignRecognizer, self).__init__()
 
@@ -46,11 +53,14 @@ class StreetSignRecognizer(Color_Slider, object):
         left, top = left_top
         right, bottom = right_bottom
 
-        # crop bounding box region of interest
-        cropped_sign = self.cv_image[top:bottom, left:right]
-
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
+
+        # crop bounding box region of interest
+        self.cropped_sign = cv2.cvtColor(self.cv_image[top:bottom, left:right], cv2.COLOR_BGR2GRAY)
+        # cropped_sign_gray = cv2.cvtColor(self.cv_image[top:bottom, left:right], cv2.COLOR_BGR2GRAY)
+        # print self.predict(cropped_sign_gray)
+
 
     def sign_bounding_box(self):
         """
@@ -116,11 +126,17 @@ class StreetSignRecognizer(Color_Slider, object):
                 cv2.waitKey(5)
                 cv2.imshow('binary_window', self.binary_image)
                 cv2.waitKey(5)
+                cv2.imshow('croped_window', self.cropped_sign)
+                cv2.waitKey(5)
             # if not self.image_info_window is None:
             #     cv2.imshow('image_info', self.image_info_window)
             #     cv2.waitKey(5)
             r.sleep()
 
 if __name__ == '__main__':
-    node = StreetSignRecognizer()
+    images = {"left": '../images/leftturn_box_small.png',
+              "right": '../images/rightturn_box_small.png',
+              "uturn": '../images/uturn_box_small.png'}
+
+    node = StreetSignRecognizer(images=images)
     node.run()

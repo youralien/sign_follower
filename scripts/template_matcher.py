@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import time
 
 """
 This code determines which of a set of template images matches
@@ -89,7 +88,6 @@ class TemplateMatcher(object):
         M, mask = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, self.ransac_thresh)
         img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
-        #TODO: change img to img_T once you do the homography transform
         visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
 # end of TemplateMatcher class
