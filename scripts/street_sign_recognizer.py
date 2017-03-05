@@ -20,6 +20,7 @@ class StreetSignRecognizer(object):
         self.cv_image = None                        # the latest image from the camera
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
+        #self.slider_window = HSVSliderWindow()
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
     def process_image(self, msg):
@@ -37,8 +38,11 @@ class StreetSignRecognizer(object):
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
-    def filter_image(self, image):
-        return cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    def filter_image(self, image, h_l=27, h_u=31, s_l=166, s_u=255, v_l=160, v_u=243):
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        binary_image = cv2.inRange(hsv_image, (h_l,s_l,v_l), (h_u,s_u,v_u))
+        return binary_image
+
 
     def sign_bounding_box(self, image):
         """
@@ -47,20 +51,31 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        left_top = (200, 200)
-        right_bottom = (400, 400)
+        # h_l = self.slider_window.hue_lower_bound
+        # h_u = self.slider_window.hue_upper_bound
+        # s_u = self.slider_window.sat_upper_bound
+        # s_l = self.slider_window.sat_lower_bound
+        # v_l = self.slider_window.val_lower_bound
+        # v_u = self.slider_window.val_upper_bound
+        binary_image = self.filter_image(image)
+        contours, _ = cv2.findContours(binary_image, 0, 2)
+        cv2.drawContours(self.cv_image, contours, -1, (255,0,0), 3)
+
+        areas = [cv2.contourArea(c) for c in contours]
+        max_index = np.argmax(areas)
+        cnt = contours[max_index]
+        x, y, w, h = cv2.boundingRect(cnt)
+        left_top = (x, y)
+        right_bottom = (x+w, y+h)
         return left_top, right_bottom
 
     def run(self):
         """ The main run loop"""
 
-        slider_window = HSVSliderWindow()
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.cv_image is None:
-                print "here"
-                filtered_image = self.filter_image(self.cv_image)
-                cv2.imshow('video_window', filtered_image)
+                cv2.imshow('video_window', self.cv_image)
                 cv2.waitKey(5)
             r.sleep()
 

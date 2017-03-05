@@ -2,12 +2,12 @@
    <arg name="bag_name"/>
 
     <!-- Show image -->
-    <node name="street_sign_recognizer" type='street_sign_recognizer.py' pkg="sign_follower"></node>
+    <node name="street_sign_recognizer" type='street_sign_recognizer.py' pkg="sign_follower" output="screen"></node>
 
     <node name="image_transport" pkg="image_transport" type="republish"
         args="in:=/camera/image_raw compressed out:=/camera/image_raw raw">
     </node>
 
     <!-- Playing Rosbag -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args=" --clock -l $(find sign_follower)/bags/$(arg bag_name).bag"/>
+    <node pkg="rosbag" type="play" name="player" args=" --clock -l $(find sign_follower)/bags/$(arg bag_name).bag"/>
 </launch>
