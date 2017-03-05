@@ -25,28 +25,37 @@ class StreetSignRecognizer(object):
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
         # hsv slider
-        cv2.namedWindow('threshold_image')
-        self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
-        cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
-        cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
-        cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
-        self.hsv_ub = np.array([255, 255, 255]) # hsv upper bound
-        cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
-        cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
-        cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)        
+        # cv2.namedWindow('threshold_image')
+        # self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
+        # cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
+        # cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
+        # cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
+        # self.hsv_ub = np.array([255, 255, 255]) # hsv upper bound
+        # cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
+        # cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
+        # cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)        
 
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
+
+        # lb = (self.hsv_lb[0], self.hsv_lb[1], self.hsv_lb[2])
+        # ub = (self.hsv_ub[0], self.hsv_ub[1], self.hsv_ub[2])
+
+        lb = (20,170,165)
+        ub = (30,255,255)
+        self.binary_image = cv2.inRange(self.hsv_image, lb, ub)
+
 
         left_top, right_bottom = self.sign_bounding_box()
         left, top = left_top
         right, bottom = right_bottom
 
         # crop bounding box region of interest
-        cropped_sign = self.cv_image[top:bottom, left:right]
+        cropped_sign = self.binary_image[top:bottom, left:right]
 
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
@@ -65,13 +74,6 @@ class StreetSignRecognizer(object):
                     1,
                     (0,0,0))
 
-        # show bgr values
-        cv2.putText(self.image_info_window,
-                    'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
-                    (5,100),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0,0,0))
 
     # hsv slider callback functions
     def set_h_lb(self, val):
@@ -106,29 +108,26 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
+        x, y, w, h = cv2.boundingRect(self.binary_image)
 
-        lb = (self.hsv_lb[0], self.hsv_lb[1], self.hsv_lb[2])
-        ub = (self.hsv_ub[0], self.hsv_ub[1], self.hsv_ub[2])
-        self.binary_image = cv2.inRange(self.hsv_image, lb, ub)
+        left_top = (x, y)
+        right_bottom = (x + w, y + h)
 
-
-        left_top = (200, 200)
-        right_bottom = (400, 400)
         return left_top, right_bottom
 
-
+        
     def run(self):
         """ The main run loop"""
         r = rospy.Rate(5)
         while not rospy.is_shutdown():
             # creates a window and displays the image for X milliseconds
             if not self.cv_image is None:
-                cv2.imshow('video_window', self.binary_image)
+                cv2.imshow('video_window', self.cv_image)
+                # cv2.imshow('video_window', self.binary_image)
                 cv2.waitKey(5)
                 
-                cv2.imshow('image_info', self.image_info_window)
-                cv2.waitKey(5)
+                # cv2.imshow('image_info', self.image_info_window)
+                # cv2.waitKey(5)
             r.sleep()
 
                 
