@@ -70,10 +70,6 @@ You will be writing all your image processing pipeline within the `process_image
 
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
-
-        # creates a window and displays the image for X milliseconds
-        cv2.imshow('video_window', self.cv_image)
-        cv2.waitKey(5)
 ```
 
 The goal of localizing the signs in the scene is to determine `left_top = (x1,y1)` and `right_bottom = (x2,y2)` points that define the upper lefthand corner and lower righthand corner of a bounding box around the sign. You can do most of your work in the instance method `sign_bounding_box`.
@@ -102,28 +98,28 @@ Finally, if you think that working with individual images, outside of the `Stree
 
 #### Red-Green-Blue to Hue-Saturation-Value Images
 
-There are different ways to represent the information in an image. A gray-scale iamge has `(n_rows, n_cols)`. An rgb image has shape `(n_rows, n_cols, 3)` since it has three channels: red, green, and blue.
+There are different ways to represent the information in an image. A gray-scale image has `(n_rows, n_cols)`. An rgb image has shape `(n_rows, n_cols, 3)` since it has three channels: red, green, and blue (note: as you saw in class, and it is the case with the given starter code, that OpenCV uses the channel ordering blue, green, red instead).
 
 Color images are also represented in different ways too.  Aside from the default RGB colorspace, there exists alot of others. We'll be focused on using [HSV/HSL](https://en.wikipedia.org/wiki/HSL_and_HSV): Hue, Saturation, and Value/Luminosity. Like RGB, a HSV image has three channels and is shape `(n_rows, n_cols, 3)`. The hue channel is well suited for color detection tasks, because we can filter by color on a single dimension of measurement, and it is a measure that is invariant to lighting conditions.
 
 [OpenCV provides methods to convert images from one color space to another](http://docs.opencv.org/2.4/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor).
 
-A good first step would be convert `self.cv_image` into an HSV image and visualize it. Like any good roboticist, visualize everything to make sure it meets your expectations.
+A good first step would be convert `self.cv_image` into an HSV image and visualize it. Like any good roboticist, visualize everything to make sure it meets your expectations.  Note: if you are using OpenCV 3.1 (which is the case for anyone on Kinetic and Ubuntu 16.04), make sure to never called cv2.imshow from one of your sensor callback threads.  You should only ever call it from the main thread.
 
 #### Filtering the image for only yellow
 
 Since the set of signs we are recognizing are all yellow, by design, we can handtune a filter that will only select the certain shade of yellow in our image.
 
-Here's a callback that will help to display the RGB value when hovering over the image window with a mouse.
+Here's a callback that will help to display the RGB value when hovering over the image window with a mouse (Note: you get this behavior for free with OpenCV 3.1).
 
 ```python
     def process_mouse_event(self, event, x,y,flags,param):
         """ Process mouse events so that you can see the color values associated
             with a particular pixel in the camera images """
-        image_info_window = 255*np.ones((500,500,3))
+        self.image_info_window = 255*np.ones((500,500,3))
 
         # show hsv values
-        cv2.putText(image_info_window,
+        cv2.putText(self.image_info_window,
                     'Color (h=%d,s=%d,v=%d)' % (self.hsv_image[y,x,0], self.hsv_image[y,x,1], self.hsv_image[y,x,2]),
                     (5,50), # 5 = x, 50 = y
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -131,25 +127,32 @@ Here's a callback that will help to display the RGB value when hovering over the
                     (0,0,0))
 
         # show bgr values
-        cv2.putText(image_info_window,
+        cv2.putText(self.image_info_window,
                     'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
                     (5,100),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
                     (0,0,0))
-        cv2.imshow('image_info', image_info_window)
-        cv2.waitKey(5)"
 ```
 
 In the `__init__` method, connect this callback by adding the following line:
 
 ```python
+self.image_info_window = None
 cv2.setMouseCallback('video_window', self.process_mouse_event)
+```
+
+And add the following lines to your run loop:
+
+```python
+            if not self.image_info_window is None:
+                cv2.imshow('image_info', self.image_info_window)
+                cv2.waitKey(5)
 ```
 
 Now, if you hover over a certain part of the image, it will tell you what R, G, B value you are hovering over. Once you have created an HSV image, you can edit this function to also display the Hue, Saturation, and Value numbers.
 
-OpenCV windows can be pretty powerful when setting up interactive sliders to change parameters.
+OpenCV windows can be pretty powerful when setting up interactive sliders to change parameters.  As stated in class for Neato soccer, if you want to learn dynamic_reconfigure, you can use that instead of OpenCV's trackbars.
 
 In the `__init__` method, copy the following lines which
 ```python
@@ -225,7 +228,7 @@ cv2.imshow("my_window", grid_cell)
 cv2.waitKey(0);
 ```
 
-The object then is to decide which grid cells contain the region of interest. You can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
+The task now is to decide which grid cells contain the region of interest. You can write another function that takes this binary grid and determines the bounding box that will include all the grid cells that were turned on.
 
 ![][grid]
 [grid]: images/grid.png

@@ -61,7 +61,7 @@ class StreetSignRecognizer(object):
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
-     
+    
     def process_mouse_event(self, event, x,y,flags,param):
         """ Process mouse events so that you can see the color values associated
         with a particular pixel in the camera images """
@@ -119,8 +119,9 @@ class StreetSignRecognizer(object):
         
     def run(self):
         """ The main run loop"""
-        r = rospy.Rate(5)
+        r = rospy.Rate(10)
         while not rospy.is_shutdown():
+
             # creates a window and displays the image for X milliseconds
             if not self.cv_image is None:
                 cv2.imshow('video_window', self.cv_image)
@@ -129,6 +130,7 @@ class StreetSignRecognizer(object):
                 
                 # cv2.imshow('image_info', self.image_info_window)
                 # cv2.waitKey(5)
+
             r.sleep()
 
                 
@@ -153,5 +155,5 @@ if __name__ == '__main__':
         print filename.split('/')[-1]
         print pred
 
-    # node = StreetSignRecognizer()
-    # node.run()
+    node = StreetSignRecognizer()
+    node.run()
