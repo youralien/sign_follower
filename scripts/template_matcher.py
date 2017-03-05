@@ -86,7 +86,12 @@ class TemplateMatcher(object):
 
         # if len(good)>MIN_MATCH_COUNT:
         M, mask = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, self.ransac_thresh)
-        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+
+        try:
+            img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+        except:
+            print "failed to warp image"
+            return 0
 
         visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
@@ -96,7 +101,7 @@ def compare_images(img1, img2):
     img1 = (img1 - img1.mean())/img1.std()
     img2 = (img2 - img2.mean())/img2.std()
 
-    return 1 / (np.absolute(img1-img2).sum() + 1)
+    return 1 / ((np.absolute(img1-img2).sum() + 1)**2)
 
 if __name__ == '__main__':
     images = {

@@ -53,13 +53,21 @@ class StreetSignRecognizer(TemplateMatcher, Color_Slider, object):
         left, top = left_top
         right, bottom = right_bottom
 
-        # draw bounding box rectangle
-        cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
-
         # crop bounding box region of interest
         self.cropped_sign = cv2.cvtColor(self.cv_image[top:bottom, left:right], cv2.COLOR_BGR2GRAY)
-        # cropped_sign_gray = cv2.cvtColor(self.cv_image[top:bottom, left:right], cv2.COLOR_BGR2GRAY)
-        # print self.predict(cropped_sign_gray)
+        cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
+
+        try:
+            predictions = self.predict(self.cropped_sign)
+            print predictions
+            v=list(predictions.values())
+            k=list(predictions.keys())
+            print k[v.index(max(v))]
+        except:
+            pass
+
+        # draw bounding box rectangle after we do predictions as it modifies image
+
 
 
     def sign_bounding_box(self):
@@ -120,7 +128,7 @@ class StreetSignRecognizer(TemplateMatcher, Color_Slider, object):
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.cv_image is None:
-                print "here"
+                # print "here"
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
                 cv2.waitKey(5)
