@@ -22,7 +22,7 @@ class TemplateMatcher(object):
         self.min_match_count = min_match_count
         self.ransac_thresh = ransac_thresh #use for keypoint threshold
 
-        #TODO: precompute keypoints for template images
+        # precompute keypoints for template images
         for k, filename in images.iteritems():
             # load template sign images as grayscale
             self.signs[k] = cv2.imread(filename,0)
@@ -37,11 +37,11 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
-        #       store keypoints in variable kp and descriptors in des
-
+        # get keypoints and descriptors from input image using SIFT
+        # store keypoints in variable kp and descriptors in des
         kp, des = self.sift.detectAndCompute(img,None)
 
+        # iterate through signs.keys to find probability of each key
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
@@ -97,7 +97,7 @@ class TemplateMatcher(object):
 def compare_images(img1, img2):
     img1 = (img1 - img1.mean())/img1.std()
     img2 = (img2 - img2.mean())/img2.std()
-    
+
     return 1 / (np.absolute(img1-img2).sum() + 1)
 
 if __name__ == '__main__':
