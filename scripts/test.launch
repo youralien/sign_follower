@@ -2,6 +2,9 @@
    <arg name="bag_name"/>
 
     <!-- Show image -->
+    <node name="street_sign_finder" type='street_sign_finder.py' pkg="sign_follower"></node>
+
+    <!-- Recognize Street Sign, output recognized sign -->
     <node name="street_sign_recognizer" type='street_sign_recognizer.py' pkg="sign_follower" output="screen"></node>
 
     <node name="image_transport" pkg="image_transport" type="republish"
