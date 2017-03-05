@@ -68,18 +68,19 @@ class TemplateMatcher(object):
         #       put keypoints from template image in template_pts
         #       put corresponding keypoints from input image in img_pts
         # Transform input image so that it matches the template image as well as possible
+
+        # make flan matcher
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
         search_params = dict(checks = 50)
 
         flann = cv2.FlannBasedMatcher(index_params, search_params)
 
+        # find the matches between known sign and img
         matches = flann.knnMatch(self.descs[k], des,k=2)
 
-        good = []
-        for m,n in matches:
-            if m.distance < 0.7*n.distance:
-                good.append(m)
+        # make list of good matches
+        good = [m for m,n in matches if m.distance < 0.7*n.distance]
 
         src_pts = np.float32([ self.kps[k][m.queryIdx].pt for m in good ]).reshape(-1,1,2)
         dst_pts = np.float32([ kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
@@ -96,11 +97,7 @@ class TemplateMatcher(object):
 def compare_images(img1, img2):
     img1 = (img1 - img1.mean())/img1.std()
     img2 = (img2 - img2.mean())/img2.std()
-    cv2.imshow('diff',np.absolute(img1-img2))
-
-    cv2.imshow('img1',img1)
-    cv2.imshow('img2',img2)
-    cv2.waitKey(5)
+    
     return 1 / (np.absolute(img1-img2).sum() + 1)
 
 if __name__ == '__main__':
