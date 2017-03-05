@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from time import sleep
+
 import cv2
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
@@ -10,7 +12,7 @@ an input image the best using the SIFT algorithm
 
 
 class TemplateMatcher(object):
-    def __init__(self, images, min_match_count=10, good_thresh=float('inf'), ransac_thresh=1):
+    def __init__(self, images, min_match_count=10, good_thresh=200, ransac_thresh=1):
         self.signs = {}  # maps keys to the template images
         self.kps = {}  # maps keys to the keypoints of the template images
         self.descs = {}  # maps keys to the descriptors of the template images
@@ -34,6 +36,10 @@ class TemplateMatcher(object):
 
             self.neighbors[k] = NearestNeighbors(n_neighbors=1, algorithm="ball_tree"). \
                 fit(self.descs[k])
+
+        cv2.namedWindow('template')
+        cv2.namedWindow('match')
+
 
     def predict(self, img):
         """
@@ -83,33 +89,43 @@ class TemplateMatcher(object):
         template_pts = []
         img_pts = []
 
+        dists = []
+
         for i, point in enumerate(kp):
             distance = distances[i][0]
             index = indices[i][0]
 
             if distance < self.good_thresh:
-                img_pts.append(point)
+                dists.append(distance)
+                img_pts.append(point.pt)
 
-                template_pts.append(self.kps[k][index])
+                template_pts.append(self.kps[k][index].pt)
 
                 # print 'Match found with distance {}'.format(distance)
 
-        print len(img_pts), len(template_pts)
+        print '{} points matched with median dist {}'.format(len(img_pts), np.median(dists))
 
         # Transform input image so that it matches the template image as well as possible
         M, mask = cv2.findHomography(np.array(img_pts), np.array(template_pts), cv2.RANSAC, self.ransac_thresh)
-        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
-
-        exit()
+        self.img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
         # TODO: change img to img_T once you do the homography transform
-        visual_diff = compare_images(img_T, self.signs[k])
+        visual_diff = compare_images(self.img_T, self.signs[k])
         return visual_diff
 
 
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
+
+    cv2.imshow('match', img1)
+    cv2.imshow('template', img2)
+
+    cv2.waitKey(5)
+
+
+    raw_input('Press enter to continue')
+
     return 0
 
 
