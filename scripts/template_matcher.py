@@ -72,16 +72,18 @@ class TemplateMatcher(object):
         k: template image for comparison, img: scene image
         kp: keypoints from scene image,   des: descriptors from scene image
         """
-        #for every key point on template, compare it to all input key points and pick the closest to match with
+        #For every key point on template, compare it to all input key points and pick the closest to match with
 
 
         template_pts = []
         img_pts = []
 
         for temp in self.kps[k]:
+            #Improbably high distance
             lowest_dist = 1000000000
             curr_temp = None
             curr_scene = None
+            #Calculate the distance between keypoints and take the best for each template keypoint
             for keyp in kp:
                 x1 = temp.pt[0]
                 x2 = keyp.pt[0]
@@ -92,7 +94,7 @@ class TemplateMatcher(object):
                     curr_temp = temp
                     curr_scene = keyp
 
-
+            #Append coordinates
             template_pts.append([curr_temp.pt[0],curr_temp.pt[1]])
             img_pts.append([curr_scene.pt[0],curr_scene.pt[1]])
 
@@ -107,7 +109,7 @@ class TemplateMatcher(object):
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
-
+    """Uses mean squared error to determine how similar the images are, given two images as inputs"""
     err = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
     err /= float(img1.shape[0] * img2.shape[1])
     return err
@@ -123,8 +125,8 @@ if __name__ == '__main__':
 
     tm = TemplateMatcher(images)
     scenes = [
-    "../images/uturn_scene.jpg",
-    "../images/leftturn_scene.jpg",
+    "../images/uturn_box.png",
+    "../images/leftturn_box.png",
     "../images/rightturn_scene.jpg"]
 
 for filename in scenes:

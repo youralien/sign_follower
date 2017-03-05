@@ -21,19 +21,6 @@ class StreetSignRecognizer(object):
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
-        
-        #init code for finding hsv under mouse in image
-        # self.image_info_window = None
-        # cv2.setMouseCallback('video_window', self.process_mouse_event)
-
-
-        #init code for sliders
-        # self.set_h_lb = 0
-        # self.set_s_lb = 0
-        # self.set_v_lb = 0
-        # self.set_h_ub = 0
-        # self.set_s_ub = 0
-        # self.set_v_ub = 0
         cv2.namedWindow('threshold_image')
         self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
         cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
@@ -51,14 +38,10 @@ class StreetSignRecognizer(object):
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
         self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
-        # self.binary_image = cv2.inRange(self.hsv_image, 
-        #     (self.hsv_lb[0],self.hsv_lb[1],self.hsv_lb[2]), 
-        #     (self.hsv_ub[0],self.hsv_ub[1],self.hsv_ub[2]))
         self.binary_image = cv2.inRange(self.hsv_image, 
             (25,176,77), 
             (158,255,236))
 
-        #proposed h range: 25-30; proposed saturation range: 230-270 ;proposed value range: 210-235
 
 
 
@@ -89,31 +72,9 @@ class StreetSignRecognizer(object):
 
         x,y,w,h = cv2.boundingRect(cnt)
         print x,y,(x+w),(y+h)
-        # cv2.rectangle(self.binary_image,(x,y),(x+w,y+h),(0,255,0),2)
         left_top = (x, y)
         right_bottom = (x+w, y+h)
         return left_top, right_bottom
-
-    # def process_mouse_event(self, event, x,y,flags,param):
-    #     """ Process mouse events so that you can see the color values associated
-    #         with a particular pixel in the camera images """
-    #     self.image_info_window = 255*np.ones((500,500,3))
-
-    #     # show hsv values
-    #     cv2.putText(self.image_info_window,
-    #                 'Color (h=%d,s=%d,v=%d)' % (self.hsv_image[y,x,0], self.hsv_image[y,x,1], self.hsv_image[y,x,2]),
-    #                 (5,50), # 5 = x, 50 = y
-    #                 cv2.FONT_HERSHEY_SIMPLEX,
-    #                 1,
-    #                 (0,0,0))
-
-    #     # show bgr values
-    #     cv2.putText(self.image_info_window,
-    #                 'Color (b=%d,g=%d,r=%d)' % (self.cv_image[y,x,0], self.cv_image[y,x,1], self.cv_image[y,x,2]),
-    #                 (5,100),
-    #                 cv2.FONT_HERSHEY_SIMPLEX,
-    #                 1,
-    #                 (0,0,0))
 
 
 
@@ -146,19 +107,10 @@ class StreetSignRecognizer(object):
         """ The main run loop"""
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
-            
-            #code for finding hsv at mousepoint
-            # if not self.image_info_window is None:
-            #     cv2.imshow('image_info', self.image_info_window)
-            #     cv2.waitKey(5)
 
             if not self.cv_image is None:
-                # print "here"
-
-                # creates a window and displays the image for X milliseconds
-                # cv2.imshow('video_window', self.cv_image)
                 cv2.imshow('video_window', self.cv_image)
-                # cv2.imshow('video_window2', self.cropped_sign)
+                cv2.imshow('video_window2', self.cropped_sign)
                 cv2.waitKey(5)
             r.sleep()
 
