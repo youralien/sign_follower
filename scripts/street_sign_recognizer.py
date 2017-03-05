@@ -115,7 +115,7 @@ class StreetSignRecognizer(object):
         """ The main run loop"""
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
-            if not self.bgr_image is None:
+            if (not self.bgr_image is None) and (not self.filt_image is None):
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.bgr_image)
                 cv2.imshow('filt_window', self.filt_image)
@@ -123,5 +123,25 @@ class StreetSignRecognizer(object):
             r.sleep()
 
 if __name__ == '__main__':
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+
+    tm = TemplateMatcher(images)
+
+    scenes = [
+        "../images/uturn_scene.jpg",
+        "../images/leftturn_scene.jpg",
+        "../images/rightturn_scene.jpg"
+    ]
+
+    for filename in scenes:
+        scene_img = cv2.imread(filename, 0)
+        pred = tm.predict(scene_img)
+        print filename.split('/')[-1]
+        print pred 
+
     node = StreetSignRecognizer()
     node.run()

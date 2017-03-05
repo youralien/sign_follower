@@ -20,7 +20,12 @@ class TemplateMatcher(object):
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
 
-        #TODO: precompute keypoints for template images
+        #for k, filename in images.iteritems():
+        #    # load template sign images as grayscale
+        #    self.signs[k] = cv2.imread(filename,0)
+
+        #    # precompute keypoints and descriptors for the template sign 
+        #    self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
 
 
     def predict(self, img):
@@ -69,5 +74,24 @@ class TemplateMatcher(object):
         return visual_diff
 # end of TemplateMatcher class
 
-def compare_images(img1, img2):
-    return 0
+#def compare_images(img1, img2):
+#    return 0
+
+if __name__ == '__main__':
+    print "hello"
+
+    #images = {"left":'../images/leftturn_box_small.png', "right":'../images/rightturn_box_small.png', "uturn":'../images/uturn_box_small.png'}
+
+    #tm = TemplateMatcher(images)
+
+    #scenes = [
+    #    "../images/uturn_scene.jpg",
+    #    "../images/leftturn_scene.jpg",
+    #    "../images/rightturn_scene.jpg"
+    #]
+
+    #for filename in scenes:
+    #    scene_img = cv2.imread(filename, 0)
+    #    pred = tm.predict(scene_img)
+    #    print filename.split('/')[-1]
+    #    print pred
