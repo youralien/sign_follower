@@ -11,13 +11,22 @@ class TemplateMatcher(object):
         self.signs = {} #maps keys to the template images
         self.kps = {} #maps keys to the keypoints of the template images
         self.descs = {} #maps keys to the descriptors of the template images
-        self.sift = cv2.SIFT() #initialize SIFT to be used for image matching
+        if cv2.__version__=='3.1.0-dev':
+            self.sift = cv2.xfeatures2d.SIFT_create()
+        else:
+            self.sift = cv2.SIFT() #initialize SIFT to be used for image matching
 
         # for potential tweaking
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
 
         #TODO: precompute keypoints for template images
+        for k, filename in images.iteritems():
+            # load template sign images as grayscale
+            self.signs[k] = cv2.imread(filename,0)
+
+            # precompute keypoints and descriptors for the template sign 
+            self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k],None)
 
 
     def predict(self, img):
@@ -60,9 +69,11 @@ class TemplateMatcher(object):
         #       put keypoints from template image in template_pts
         #       put corresponding keypoints from input image in img_pts
 
+        # Transform input image so that it matches the template image as well as possible
+        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
+        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
-        #TODO: change img to img_T once you do the homography transform
-        visual_diff = compare_images(img, self.signs[k])
+        visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
 # end of TemplateMatcher class
 
