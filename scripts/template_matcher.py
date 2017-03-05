@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
 
 """
 This code determines which of a set of template images matches
@@ -46,16 +47,12 @@ class TemplateMatcher(object):
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
-            pass
-            # TODO: convert difference between images (from visual_diff)
-            #       to confidence values (stored in template_confidence)
+            sum_diffs = sum([visual_diff[k] for k in self.signs.keys()])
+            template_confidence = {k: visual_diff[k]/sum_diffs for k in self.signs.keys()}
 
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
-
-        #TODO: delete line below once the if statement is written
-        template_confidence = {k: 0 for k in self.signs.keys()}
 
         return template_confidence
 
@@ -97,7 +94,14 @@ class TemplateMatcher(object):
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
-    return 0
+    img1 = (img1 - img1.mean())/img1.std()
+    img2 = (img2 - img2.mean())/img2.std()
+    cv2.imshow('diff',np.absolute(img1-img2))
+
+    cv2.imshow('img1',img1)
+    cv2.imshow('img2',img2)
+    cv2.waitKey(5)
+    return 1 / (np.absolute(img1-img2).sum() + 1)
 
 if __name__ == '__main__':
     images = {
