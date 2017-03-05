@@ -47,7 +47,7 @@ class TemplateMatcher(object):
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
-            pass
+            template_confidence = {k: (1 - visual_diff[k]) for k in self.signs.keys()}
             # Convert difference between images (from visual_diff)
             #       to confidence values (stored in template_confidence)
             
@@ -55,9 +55,6 @@ class TemplateMatcher(object):
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
             
-        #TODO: delete line below once the if statement is written
-        template_confidence = {k: 0 for k in self.signs.keys()}
-
         return template_confidence
 
 
@@ -73,9 +70,22 @@ class TemplateMatcher(object):
         #       put corresponding keypoints from input image in img_pts
 
         # Transform input image so that it matches the template image as well as possible
-        template_pts = numpy.array(self.kps[k])
-        img_pts = numpy.array(kp)
-        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.good_thresh)
+        
+        bf = cv2.BFMatcher()
+        matches = bf.knnMatch(self.descs[k], des, k=2)
+
+        #Apply ratio test
+        good = []
+        for m,n in matches:
+            if m.distance < self.good_thresh*n.distance:
+                good.append(m)
+
+        if len(good) > 0:
+            template_pts = numpy.float32([ kp[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+            img_pts = numpy.float32([ self.kps[k][m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+            
+                
+        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, 5.0) #the threshold is a guess for now
         img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
         visual_diff = compare_images(img_T, self.signs[k])
@@ -84,7 +94,22 @@ class TemplateMatcher(object):
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
-    return 0
+    mean1 = numpy.average(img1)
+    mean2 = numpy.average(img2)
+    std1 = numpy.std(img1)
+    std2 = numpy.std(img2)
+    
+    if std1 == 0:
+        std1 = 0.01
+    if std2 == 0:
+        std2 = 0.01
+        
+    norm1 = [(elt - mean1)/std1 for elt in img1]
+    norm2 = [(elt - mean2)/std2 for elt in img2]
+    
+    sum1 = numpy.sum(std1)
+    sum2 = numpy.sum(std2)
+    return abs(sum1 / sum2)
 
 if __name__ == '__main__':
     images = {
