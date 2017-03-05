@@ -71,11 +71,13 @@ class StreetSignRecognizer(object):
 
         self.binary_img = cv2.inRange(self.hsv_img, self.hsv_min, self.hsv_max)
 
-        im2, contours, hierarchy = cv2.findContours(self.binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        binary_image_copy = np.copy(self.binary_img)
+
+        im2, contours, hierarchy = cv2.findContours(binary_image_copy, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # Find the largest contour
         contour = max(contours, key=cv2.contourArea)
 
-        x, y, w, h = cv2.boundingRect(contour);
+        x, y, w, h = cv2.boundingRect(contour)
 
         cv2.drawContours(self.hsv_img, [contour], 0, (255, 0, 9), thickness=5)
 
