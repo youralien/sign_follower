@@ -27,6 +27,10 @@ class StreetSignRecognizer(object):
         self.hsv_lb = np.array([20, 170, 154])  # hsv lower bound
         self.hsv_ub = np.array([33, 255, 255])  # hsv upper bound
 
+        # morphology setup
+        kernel_size = 5
+        self.morphology_kernel = np.ones((kernel_size, kernel_size), np.uint8)
+
         self.get_hue_range_tool = False
         if self.get_hue_range_tool:
             cv2.namedWindow('threshold_image')
@@ -116,12 +120,10 @@ class StreetSignRecognizer(object):
         return threshold_image  # return cv2.filter2D(threshold_image, -1, kernel)
 
     def find_big_parts(self, threshold_image):
-        # use morphology
-        blur_size = 5
-        kernel = np.ones((blur_size, blur_size), np.float32) / blur_size ** 2
-
-        eroded = cv2.erode(threshold_image, kernel, iterations=1)
-        dilated = cv2.dilate(eroded, kernel, iterations=1)
+        # use morphology to get rid of small parts
+        eroded = cv2.erode(threshold_image, self.morphology_kernel, iterations=1)
+        # and make everything we found a bit bigger
+        dilated = cv2.dilate(eroded, self.morphology_kernel, iterations=1)
 
         return dilated
 
