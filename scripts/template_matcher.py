@@ -25,6 +25,13 @@ class TemplateMatcher(object):
 
         #TODO: precompute keypoints for template images
 
+        for k, filename in images.iteritems():
+            # load template sign images as grayscale
+            self.signs[k] = cv2.imread(filename,0)
+
+            # precompute keypoints and descriptors for the template sign 
+            self.kps[k], self.descs[k] = self.orb.detectAndCompute(self.signs[k],None)
+
 
     def predict(self, img):
         """
@@ -33,21 +40,12 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using ORB
-        #       store keypoints in variable kp and descriptors in des
-        for k, filename in images.iteritems():
-            # load template sign images as grayscale
-            self.signs[k] = cv2.imread(filename,0)
-
-            # precompute keypoints and descriptors for the template sign 
-            self.kps[k], self.descs[k] = self.orb.detectAndCompute(self.signs[k],None)
-
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, self.kps, self.descs)
 
         if visual_diff:
-            diff_range = max(visual_diff.values()) - min(visual_diff.values())
+            diff_range = np.sum(visual_diff.values()) - min(visual_diff.values())
             template_confidence = {k: (visual_diff[k] - min(visual_diff.values()))/diff_range for k in self.signs.keys()}
 
             # TODO: convert difference between images (from visual_diff)
@@ -56,9 +54,6 @@ class TemplateMatcher(object):
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
-            
-        #TODO: delete line below once the if statement is written
-        # template_confidence = {k: 0 for k in self.signs.keys()}
 
         return template_confidence
 
