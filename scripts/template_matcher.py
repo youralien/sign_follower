@@ -71,3 +71,12 @@ class TemplateMatcher(object):
 
 def compare_images(img1, img2):
     return 0
+
+if __name__ == '__main__':
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+
+    tm = TemplateMatcher(images)
