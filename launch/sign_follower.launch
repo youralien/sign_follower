@@ -1,0 +1,27 @@
+<launch>
+  <!-- Params/Args -->
+  <arg name="bag_name"/>
+
+  <!-- Run the rosbag -->
+  <node
+    name="rosbag_test"
+    pkg="rosbag"
+    type="play"
+    output="screen"
+    args="-l $(find sign_follower)/bags/$(arg bag_name).bag"/>
+
+  <!-- Decompress bagged camera images -->
+  <node
+    name="republish"
+    type="republish"
+    pkg="image_transport"
+    output="screen"
+    args="compressed in:=/camera/image_raw _image_transport:=compressed raw out:=/camera/image_raw" />
+
+  <!-- Run the node -->
+  <node
+    name="street_sign_recognizer"
+    pkg="sign_follower"
+    type="street_sign_recognizer.py"
+    output="screen" />
+</launch>
