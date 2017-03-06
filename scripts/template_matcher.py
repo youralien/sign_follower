@@ -19,10 +19,13 @@ class TemplateMatcher(object):
         # for potential tweaking
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
+        self.ransac_thres = 0.8
 
-        #TODO: precompute keypoints for template images
+        # precompute keypoints for template images
         for k, filename in images.iteritems():
             # load template sign images as grayscale
+
+            # FIXME: cv2.imread returns None for these images
             self.signs[k] = cv2.imread(filename,0)
 
             # precompute keypoints and descriptors for the template sign 
@@ -36,15 +39,16 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
-        #       store keypoints in variable kp and descriptors in des
+        # get keypoints and descriptors from input image using SIFT
+        # store keypoints in variable kp and descriptors in des
+        kp, des = self.sift.detectAndCompute(img, None)
 
         for k in self.signs.keys():
-            #cycle trough templage images (k) and get the image differences
+            #cycle through template images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
-            pass
+            print visual_diff
             # TODO: convert difference between images (from visual_diff)
             #       to confidence values (stored in template_confidence)
 
@@ -70,6 +74,12 @@ class TemplateMatcher(object):
         #       put corresponding keypoints from input image in img_pts
 
         # Transform input image so that it matches the template image as well as possible
+        
+        # print img
+
+        # img_pts = 
+        # template_pts = 
+
         M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
         img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
