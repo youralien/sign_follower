@@ -59,12 +59,11 @@ class TemplateMatcher(object):
         kp: keypoints from scene image,   des: descriptors from scene image
         """
 
-        # TODO: find corresponding points in the input image and the templae image
+        # TODO: find corresponding points in the input image and the template image
         #       put keypoints from template image in template_pts
         #       put corresponding keypoints from input image in img_pts
 
-
-        #TODO: change img to img_T once you do the homography transform
+        # TODO: change img to img_T once you do the homography transform
         visual_diff = compare_images(img, self.signs[k])
         return visual_diff
 # end of TemplateMatcher class
