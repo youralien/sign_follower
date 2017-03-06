@@ -34,6 +34,16 @@ class StreetSignRecognizer(object):
         cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
         cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
 
+        images = {
+        "left": '/home/shruti/catkin_ws/src/sign_follower/images/leftturn_box_small.png',
+        "right": '/home/shruti/catkin_ws/src/sign_follower/images/rightturn_box_small.png',
+        "uturn": '/home/shruti/catkin_ws/src/sign_follower/images/uturn_box_small.png'
+        }
+
+        self.pred_total = {}
+        self.pred_sign = None
+        self.tm = TemplateMatcher(images)
+
     def set_h_lb(self, val):
         """ set hue lower bound """
         self.hsv_lb[0] = 16
@@ -73,6 +83,17 @@ class StreetSignRecognizer(object):
         # crop bounding box region of interest
         cropped_sign = self.cv_image[top:bottom, left:right]
 
+        # Convert to grayscale 
+        gray_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
+
+        # Run the template matcher
+        pred = self.tm.predict(gray_image)
+
+        if self.pred_total:
+            for key, value in pred.iteritems():
+                self.pred_total[key] += value
+        else:
+            self.pred_total = pred
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
@@ -94,31 +115,15 @@ class StreetSignRecognizer(object):
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.cv_image is None:
-                print "here"
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
+                if (self.pred_total):
+                    if (self.pred_total[max(self.pred_total, key=self.pred_total.get)] > 5):
+                        self.pred_sign = max(self.pred_total, key=self.pred_total.get)
+                print self.pred_sign
                 cv2.waitKey(5)
             r.sleep()
 
 if __name__ == '__main__':
-    # node = StreetSignRecognizer()
-    # node.run()
-    images = {
-        "left": '../images/leftturn_box_small.png',
-        "right": '../images/rightturn_box_small.png',
-        "uturn": '../images/uturn_box_small.png'
-        }
-
-    tm = TemplateMatcher(images)
-
-    scenes = [
-        "../images/uturn_scene.jpg",
-        "../images/leftturn_scene.jpg",
-        "../images/rightturn_scene.jpg"
-    ]
-
-    for filename in scenes:
-        scene_img = cv2.imread(filename, 0)
-        pred = tm.predict(scene_img)
-        print filename.split('/')[-1]
-        print pred
+    node = StreetSignRecognizer()
+    node.run()
