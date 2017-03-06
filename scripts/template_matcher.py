@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 """
 This code determines which of a set of template images matches
@@ -8,9 +9,9 @@ an input image the best using the SIFT algorithm
 class TemplateMatcher(object):
 
     def __init__ (self, images, min_match_count=10, good_thresh=0.7):
-        self.signs = {} #maps keys to the template images
-        self.kps = {} #maps keys to the keypoints of the template images
-        self.descs = {} #maps keys to the descriptors of the template images
+        self.signs = {} # maps keys to the template images
+        self.keypointsMap = {} # maps keys to the keypoints of the template images
+        self.descriptorsMap = {} # maps keys to the descriptors of the template images
         if cv2.__version__=='3.1.0-dev':
             self.sift = cv2.xfeatures2d.SIFT_create()
         else:
@@ -19,15 +20,18 @@ class TemplateMatcher(object):
         # for potential tweaking
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
+        self.ransac_thresh = 5.0
+
+        self.bf = cv2.BFMatcher()
 
         # Precompute keypoints for template images
-        for k, filename in images.iteritems():
+        for key, filename in images.iteritems():
 
             # load template sign images as grayscale
-            self.signs[k] = cv2.imread(filename,0)
+            self.signs[key] = cv2.imread(filename, 0)
 
             # precompute keypoints and descriptors for the template sign
-            self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k], None)
+            self.keypointsMap[key], self.descriptorsMap[key] = self.sift.detectAndCompute(self.signs[key], None)
 
     def predict(self, img):
         """
@@ -36,8 +40,9 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
-        #       store keypoints in variable kp and descriptors in des
+        # Get keypoints and descriptors from input image using SIFT
+        # Store keypoints in variable kp and descriptors in des
+        kp, des = self.sift.detectAndCompute(img, None)
 
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
@@ -57,23 +62,32 @@ class TemplateMatcher(object):
 
         return template_confidence
 
-
-    def _compute_prediction(self, k, img, kp, des):
+    def _compute_prediction(self, k, img, keypoints, descriptors):
         """
         Return comparison values between a template k and given image
         k: template image for comparison, img: scene image
-        kp: keypoints from scene image,   des: descriptors from scene image
+        keypoints: keypoints from scene image,   descriptors: descriptors from scene image
         """
 
-        # TODO: find corresponding points in the input image and the templae image
-        #       put keypoints from template image in template_pts
-        #       put corresponding keypoints from input image in img_pts
+        # Find corresponding points in the input image and the template image
+        # put keypoints from template image in template_pts
+        # put corresponding keypoints from input image in img_pts
 
+        # http://docs.opencv.org/trunk/dc/dc3/tutorial_py_matcher.html
+        matches = self.bf.knnMatch(self.descriptorsMap[k], descriptors, k = 2)
 
-        #TODO: change img to img_T once you do the homography transform
-        visual_diff = compare_images(img, self.signs[k])
+        # Apply ratio test
+        good_matches = [m for (m, n) in matches if (m.distance < 0.75 * n.distance)]
+
+        img_pts = np.asarray([keypoints[match.trainIdx].pt for match in good_matches])
+        template_pts = np.asarray([self.keypointsMap[k][match.queryIdx].pt for match in good_matches])
+
+        # Transform input image so that it matches the template image as well as possible
+        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
+        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+
+        visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
-# end of TemplateMatcher class
 
 def compare_images(img1, img2):
     return 0
