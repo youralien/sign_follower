@@ -23,8 +23,6 @@ class TemplateMatcher(object):
         self.good_thresh = good_thresh #use for keypoint threshold
         self.ransac_thresh = 5
 
-        #TODO: precompute keypoints for template images
-
         for k, filename in images.iteritems():
             # load template sign images as grayscale
             self.signs[k] = cv2.imread(filename,0)
@@ -48,9 +46,6 @@ class TemplateMatcher(object):
             diff_range = np.sum(visual_diff.values()) - min(visual_diff.values())
             template_confidence = {k: (visual_diff[k] - min(visual_diff.values()))/diff_range for k in self.signs.keys()}
 
-            # TODO: convert difference between images (from visual_diff)
-            #       to confidence values (stored in template_confidence)
-
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
@@ -70,8 +65,8 @@ class TemplateMatcher(object):
         #       put corresponding keypoints from input image in img_pts
         img_kp, img_des = self.orb.detectAndCompute(img,None)
 
-        template_pts = np.array([])
-        img_pts = np.array([])
+        template_pts = np.array([[0.,0.]])
+        img_pts = np.array([[0.,0.]])
         
         for i in xrange(len(des[k])):
             descriptor = des[k][i]
@@ -93,10 +88,10 @@ class TemplateMatcher(object):
                     closest[0] = j
                     closest[1] = dist
             if closest[1] < (0.7*second_closest[1]):
-                np.append(template_pts, [kp[k][i]])
-                np.append(img_pts, [img_kp[i]])
+                template_pts = np.append(template_pts, [[kp[k][i].pt[0], kp[k][i].pt[1]]], axis=0)
+                img_pts = np.append(img_pts, [[img_kp[i].pt[0], img_kp[i].pt[1]]], axis=0)
 
-        if len(img_pts) > 3:
+        if len(img_pts) > 2:
             M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
             img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
             visual_diff = compare_images(img_T, self.signs[k])
