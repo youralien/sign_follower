@@ -1,5 +1,11 @@
 # Sign Follower
 
+## Shane's Demo
+
+![Sign Detection Demo](demo/sign_detection_demo.gif)
+
+## Example Demo
+
 By the end of the Traffic Sign Follower project, you will have a robot that will look like this!
 
 **Video Demo:** [NEATO ROBOT OBEYS TRAFFIC SIGNS](https://youtu.be/poReVhj1lSA)
