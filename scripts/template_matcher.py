@@ -55,8 +55,8 @@ class TemplateMatcher(object):
                 temp.append(visual_diff[k])
 
             total = sum(temp)
-
-            template_confidence = {k: (visual_diff[k]/total) for k in self.signs.keys()}
+            #The highest value is the most confident answer
+            template_confidence = {k: 1-(visual_diff[k]/total) for k in self.signs.keys()}
 
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
