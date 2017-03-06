@@ -10,6 +10,8 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 
+from template_matcher import defaultMatcher
+
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -26,11 +28,16 @@ class StreetSignRecognizer(object):
         cv2.namedWindow('binary_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
+        self.buffer_size = 30  # pixels
+
         self.hsv_min = np.array((20, 200, 200))
         self.hsv_max = np.array((40, 255, 255))
 
         self.make_multi_slider(self.hsv_min, "min ")
         self.make_multi_slider(self.hsv_max, "max ")
+
+        self.recognizer = defaultMatcher()
+
 
     @staticmethod
     def make_multi_slider(array, prefix="", window='binary_window', names='H S V'.split(), max=255):
@@ -53,11 +60,24 @@ class StreetSignRecognizer(object):
         left, top = left_top
         right, bottom = right_bottom
 
-        # crop bounding box region of interest
-        cropped_sign = self.cv_image[top:bottom, left:right]
+        if right > 0:
+            # draw bounding box rectangle
+            cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
-        # draw bounding box rectangle
-        cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
+            # crop bounding box region of interest
+            cropped_sign = self.cv_image[top:bottom, left:right]
+
+            cropped_gray = cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY)
+
+            # self.binary_img = cropped_gray
+
+            # Detect which sign this is
+            probs = self.recognizer.predict(cropped_gray)
+
+            print "Image identified as {} with chance {}".format(max(probs, key=lambda k: probs[k]), max(probs.values()))
+        else:
+            print "No bounding box found"
+
 
     def sign_bounding_box(self):
         """
@@ -66,7 +86,6 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        # TODO: YOUR SOLUTION HERE
         self.hsv_img = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
 
         self.binary_img = cv2.inRange(self.hsv_img, self.hsv_min, self.hsv_max)
@@ -74,6 +93,10 @@ class StreetSignRecognizer(object):
         binary_image_copy = np.copy(self.binary_img)
 
         im2, contours, hierarchy = cv2.findContours(binary_image_copy, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        if len(contours) == 0:
+            return (0, 0), (0, 0)
+
         # Find the largest contour
         contour = max(contours, key=cv2.contourArea)
 
@@ -81,9 +104,11 @@ class StreetSignRecognizer(object):
 
         cv2.drawContours(self.hsv_img, [contour], 0, (255, 0, 9), thickness=5)
 
-        left_top = (x, y)
-        right_bottom = (x + w, y+h)
-        return left_top, right_bottom
+        left_top = [x - self.buffer_size, y - self.buffer_size]
+        right_bottom = [x + w + self.buffer_size, y + h + self.buffer_size]
+
+        left_top[0] = max(left_top[0], 1)
+        return tuple(left_top), tuple(right_bottom)
 
     def run(self):
         """ The main run loop"""

@@ -37,9 +37,8 @@ class TemplateMatcher(object):
             self.neighbors[k] = NearestNeighbors(n_neighbors=1, algorithm="ball_tree"). \
                 fit(self.descs[k])
 
-        cv2.namedWindow('template')
-        cv2.namedWindow('match')
-
+        # cv2.namedWindow('template')
+        # cv2.namedWindow('match')
 
     def predict(self, img):
         """
@@ -56,16 +55,14 @@ class TemplateMatcher(object):
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
-            pass
-            # TODO: convert difference between images (from visual_diff)
-            #       to confidence values (stored in template_confidence)
+            # TODO: this algorithm could be much smarter, but has the essential properties for now
+            # Evnetually, it should gauruntee that all of the weights sum to 1.
+            max = np.max(visual_diff.values())
+            template_confidence = {k: 1 - (visual_diff[k] / max) for k in self.signs.keys()}
 
         else:  # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
-
-        # TODO: delete line below once the if statement is written
-        template_confidence = {k: 0 for k in self.signs.keys()}
 
         return template_confidence
 
@@ -103,13 +100,12 @@ class TemplateMatcher(object):
 
                 # print 'Match found with distance {}'.format(distance)
 
-        print '{} points matched with median dist {}'.format(len(img_pts), np.median(dists))
+        # print '{} points matched with median dist {}'.format(len(img_pts), np.median(dists))
 
         # Transform input image so that it matches the template image as well as possible
         M, mask = cv2.findHomography(np.array(img_pts), np.array(template_pts), cv2.RANSAC, self.ransac_thresh)
         self.img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
-        # TODO: change img to img_T once you do the homography transform
         visual_diff = compare_images(self.img_T, self.signs[k])
         return visual_diff
 
@@ -117,31 +113,39 @@ class TemplateMatcher(object):
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
+    # cv2.imshow('match', img1)
+    # cv2.imshow('template', img2)
 
-    cv2.imshow('match', img1)
-    cv2.imshow('template', img2)
+    # cv2.waitKey(5)
 
-    cv2.waitKey(5)
+    def normalize(img):
+        return (img - np.mean(img)) / np.std(img)
+
+    matchDist = np.linalg.norm(normalize(img1) - normalize(img2))
+
+    # raw_input('Match found with distance {}. Press enter to continue'.format(matchDist))
+
+    return matchDist
 
 
-    raw_input('Press enter to continue')
-
-    return 0
-
-
-if __name__ == '__main__':
+def defaultMatcher():
     images = {
         "left": '../images/leftturn_box_small.png',
         "right": '../images/rightturn_box_small.png',
         "uturn": '../images/uturn_box_small.png'
     }
 
-    tm = TemplateMatcher(images)
+    return TemplateMatcher(images)
+
+
+if __name__ == '__main__':
+
+    tm = defaultMatcher()
 
     scenes = [
-        "../images/uturn_scene.jpg",
-        "../images/leftturn_scene.jpg",
-        "../images/rightturn_scene.jpg"
+        "../images/uturn_box.png",
+        "../images/leftturn_box.png",
+        "../images/rightturn_box_small.png"
     ]
 
     for filename in scenes:
