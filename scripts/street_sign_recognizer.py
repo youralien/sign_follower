@@ -133,7 +133,7 @@ class StreetSignRecognizer(object):
 
             r.sleep()
 
-                
+
 if __name__ == '__main__':
     images = {
         "left": '../images/leftturn_box_small.png',
@@ -141,19 +141,23 @@ if __name__ == '__main__':
         "uturn": '../images/uturn_box_small.png'
         }
 
-    tm = TemplateMatcher(images)
-
     scenes = [
         "../images/uturn_scene.jpg",
         "../images/leftturn_scene.jpg",
         "../images/rightturn_scene.jpg"
     ]
 
+    import os
+    print "Path exists: ", os.path.exists("../images/rightturn_scene.jpg")
+
+    tm = TemplateMatcher(images)
+
     for filename in scenes:
         scene_img = cv2.imread(filename, 0)
+        # print scene_img.shape
         pred = tm.predict(scene_img)
         print filename.split('/')[-1]
         print pred
 
-    node = StreetSignRecognizer()
-    node.run()
+    # node = StreetSignRecognizer()
+    # node.run()
