@@ -15,9 +15,10 @@ class TemplateMatcher(object):
         self.descs = {} #maps keys to the descriptors of the template images
         self.sift = cv2.SIFT() #initialize SIFT to be used for image matching
 
-        # for potential tweaking
-        self.min_match_count = min_match_count
+        self.min_match_count = min_match_count # Number of good matches needed to transform image
         self.good_thresh = good_thresh #use for keypoint threshold
+
+        cv2.namedWindow('transformed image')
 
         #Precompute keypoints for template images
         for k, filename in images.iteritems():
@@ -33,7 +34,7 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
+        # Get keypoints and descriptors from input image using SIFT
         #       store keypoints in variable kp and descriptors in des
 
         kp, des = self.sift.detectAndCompute(img,None)
@@ -49,12 +50,8 @@ class TemplateMatcher(object):
             for k in visual_diff.keys():
                 if visual_diff[k]<=0:
                     confidence = 0
-                elif visual_diff[k]<0.6:
-                    confidence = 0.4
-                elif visual_diff[k]<0.85:
-                    confidence = 0.7
                 else:
-                    confidence = 1
+                    confidence = round(visual_diff[k],2)
                 template_confidence[k] = confidence 
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
@@ -69,26 +66,51 @@ class TemplateMatcher(object):
         k: template image for comparison, img: scene image
         kp: keypoints from scene image,   des: descriptors from scene image
         """
-        # Find corresponding points in the input image and the template image
-        #       put keypoints from template image in template_pts
-        #       put corresponding keypoints from input image in img_pts
-        print des
-        template_pts = self.descs[k]
-        img_pts = des
+        # Find corresponding key points in the input image and the template image using cv2's Flann Based algorithm
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
 
-        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.good_thresh)
-        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-        visual_diff = compare_images(img_T, self.signs[k])
-        return visual_diff
+        matches = flann.knnMatch(des,self.descs[k],k=2)
+
+        # store all the good matches as per Lowe's ratio test. From experience, most correct matches satisfy this test
+        good = []
+        for m,n in matches:
+            if m.distance < 0.7*n.distance: #Tuning this value changes the behavior a lot, 0.7 is definitely an optimum
+                good.append(m)
+
+        if len(good)>self.min_match_count:
+            # put keypoints from template image in template_pts
+            # put corresponding keypoints from input image in img_pts
+            img_pts = np.float32([kp[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+            template_pts = np.float32([self.kps[k][m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+            
+            M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.good_thresh)
+            img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+
+            #Visualize the image to see if it looks like the template:
+            cv2.imshow('transformed image', img_T)
+            cv2.waitKey(0) #Wait for a key to be pressed to move on
+
+            visual_diff = compare_images(img_T, self.signs[k])
+            return visual_diff
+        else:
+            print "Not enough matches are found - %d/%d" % (len(good),MIN_MATCH_COUNT)
+            return None
+
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
-    img1 = normalize(img1)
-    img2 = normalize(img2)
-    return np.corrcoef(img1,img2)[0,1]
+    """Find the correlation coefficient between img1 and img2
+    Returns a value from -1 to 1"""
+    img1 = np.ravel(normalize(img1))
+    img2 = np.ravel(normalize(img2))
+    return np.corrcoef(img1,img2)[0,1] #this matrix is 2 by 2 
 
 def normalize(img):
+    """Returns a normalized img matrix"""
     return(img-np.mean(img))/np.std(img)
 
 if __name__ == '__main__':
