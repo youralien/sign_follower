@@ -64,9 +64,10 @@ class StreetSignRecognizer(object):
         mask = cv2.inRange(cv_image_hsv, lb, ub)
         self.cv_image_res = cv2.bitwise_and(self.cv_image, self.cv_image, mask = mask)
 
-        # TODO: Apply bounding box over most dense region
-        left_top = (200, 200)
-        right_bottom = (400, 400)
+        # Apply bounding box over most dense region
+        x, y, w, h = cv2.boundingRect(mask)
+        left_top = (x, y)
+        right_bottom = (x + w, y + h)
         return left_top, right_bottom
 
     def run(self):
