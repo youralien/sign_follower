@@ -48,17 +48,12 @@ class TemplateMatcher(object):
             #cycle trough templage images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
-        if visual_diff:
-            pass
-            # TODO: convert difference between images (from visual_diff)
-            #       to confidence values (stored in template_confidence)
-
-        else: # if visual diff was not computed (bad crop, homography could not be computed)
-            # set 0 confidence for all signs
-            template_confidence = {k: 0 for k in self.signs.keys()}
-
-        #TODO: delete line below once the if statement is written
         template_confidence = {k: 0 for k in self.signs.keys()}
+
+        if visual_diff:
+            normalizing_scale = sum(np.divide(1, visual_diff.values()))
+            for key in visual_diff:
+                template_confidence[key] = 1 / (visual_diff[key] * normalizing_scale)
 
         return template_confidence
 
@@ -90,7 +85,12 @@ class TemplateMatcher(object):
         return visual_diff
 
 def compare_images(img1, img2):
-    return 0
+
+    # Normalize
+    img1_norm = (img1 - np.mean(img1)) / np.std(img1)
+    img2_norm = (img2 - np.mean(img2)) / np.std(img2)
+
+    return np.linalg.norm(np.subtract(img1_norm, img2_norm))
 
 if __name__ == '__main__':
 
