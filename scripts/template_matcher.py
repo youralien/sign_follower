@@ -1,4 +1,6 @@
 import cv2
+import numpy as np
+from math import exp
 
 """
 This code determines which of a set of template images matches
@@ -19,9 +21,14 @@ class TemplateMatcher(object):
         # for potential tweaking
         self.min_match_count = min_match_count
         self.good_thresh = good_thresh #use for keypoint threshold
+        self.ransac_thresh = 5.0
 
-        #TODO: precompute keypoints for template images
+        for k, filename in images.iteritems():
+            # load template sign images as grayscale
+            self.signs[k] = cv2.imread(filename,0)
 
+            # precompute keypoints and descriptors for the template sign
+            self.kps[k], self.descs[k] = self.sift.detectAndCompute(self.signs[k], None)
 
     def predict(self, img):
         """
@@ -30,24 +37,18 @@ class TemplateMatcher(object):
         """
         visual_diff = {}
 
-        # TODO: get keypoints and descriptors from input image using SIFT
-        #       store keypoints in variable kp and descriptors in des
+        kp, des = self.sift.detectAndCompute(img, None)
 
         for k in self.signs.keys():
-            #cycle trough templage images (k) and get the image differences
+            #cycle trough template images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
 
         if visual_diff:
-            pass
-            # TODO: convert difference between images (from visual_diff)
-            #       to confidence values (stored in template_confidence)
+            template_confidence = {k: (90-visual_diff[k])/90 for k in self.signs.keys()}
 
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
-            
-        #TODO: delete line below once the if statement is written
-        template_confidence = {k: 0 for k in self.signs.keys()}
 
         return template_confidence
 
@@ -59,15 +60,63 @@ class TemplateMatcher(object):
         kp: keypoints from scene image,   des: descriptors from scene image
         """
 
-        # TODO: find corresponding points in the input image and the templae image
-        #       put keypoints from template image in template_pts
-        #       put corresponding keypoints from input image in img_pts
+        # http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_feature2d/py_matcher/py_matcher.html
+        bf = cv2.BFMatcher()
+        matches = bf.knnMatch(self.descs[k], des, k=2)
 
+        good = []
+        for m, n in matches:
+            if m.distance < 0.75*n.distance:
+                good.append(m)
 
-        #TODO: change img to img_T once you do the homography transform
-        visual_diff = compare_images(img, self.signs[k])
+        # http://stackoverflow.com/questions/35884409/how-to-extract-x-y-coordinates-from-opencv-cv2-keypoint-object
+        img_pts = np.float32([kp[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+        curr_kp = self.kps[k]
+        template_pts = np.float32([curr_kp[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
+
+        # Transform input image so that it matches the template image as well as possible
+        M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
+        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+
+        visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):
-    return 0
+    
+    mean = np.mean(img1)
+    std = np.std(img1)
+    std = 0.01 if std == 0 else std
+    for i in range(len(img1)):
+        img1[i] = (img1[i] - mean) / std
+
+    mean = np.mean(img2)
+    std = np.std(img2)
+    std = 0.01 if std == 0 else std
+    for i in range(len(img2)):
+        img2[i] = (img2[i] - mean) / std
+
+    print np.mean(np.absolute(np.subtract(img1, img2)))
+
+    return np.mean(np.absolute(np.subtract(img1, img2)))
+
+if __name__ == '__main__':
+    images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+
+    tm = TemplateMatcher(images)
+    
+    scenes = [
+        "../images/uturn_scene.jpg",
+        "../images/leftturn_scene.jpg",
+        "../images/rightturn_scene.jpg"
+        ]
+
+    for filename in scenes:
+        scene_img = cv2.imread(filename, 0)
+        pred = tm.predict(scene_img)
+        print filename.split('/')[-1]
+        print pred
