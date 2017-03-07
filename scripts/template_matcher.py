@@ -48,8 +48,8 @@ class TemplateMatcher(object):
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
             visual_diff[k] = self._compute_prediction(k, img, kp, des)
-
-        if visual_diff:
+        
+        if not (None in visual_diff.values()):
             template_confidence = {}
             for k in visual_diff:
             	template_confidence[k] = 50/visual_diff[k]
@@ -79,21 +79,26 @@ class TemplateMatcher(object):
                 kp[m.queryIdx].response > 0.0 and
                 self.kps[k][m.trainIdx].response > 0.0):
                 good_matches.append((m.queryIdx, m.trainIdx))
-
-        #create pt lists
-        img_pts = np.zeros((len(good_matches),2))
-        tem_pts = np.zeros((len(good_matches),2))
-        for idx in range(len(good_matches)):
-            match = good_matches[idx]
-            img_pts[idx,:] = kp[match[0]].pt
-            tem_pts[idx,:] = self.kps[k][match[1]].pt
-
-        # Transform input image so that it matches the template image as well as possible
-        M, mask = cv2.findHomography(img_pts, tem_pts, cv2.RANSAC, 8.0)
-        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
-
-        visual_diff = compare_images(img_T, self.signs[k])
+        
+        if len(good_matches) < 4:
+            visual_diff = None
+        else:
+            #create pt lists
+            img_pts = np.zeros((len(good_matches),2))
+            tem_pts = np.zeros((len(good_matches),2))
+            for idx in range(len(good_matches)):
+                match = good_matches[idx]
+                img_pts[idx,:] = kp[match[0]].pt
+                tem_pts[idx,:] = self.kps[k][match[1]].pt
+        
+            # Transform input image so that it matches the template image as well as possible
+            M, mask = cv2.findHomography(img_pts, tem_pts, cv2.RANSAC, 8.0)
+            img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
+ 	
+            #calculate error
+            visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
+        #not functioning properly (currently does not return highest value for identical image/scene pair)
 # end of TemplateMatcher class
 
 def compare_images(img1, img2):

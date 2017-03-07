@@ -78,11 +78,8 @@ class StreetSignRecognizer(object):
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
         #attempt to id sign
-        try:
-            self.check_sign(cropped_sign)
-        except:
-	    print("bad box")
-
+        self.check_sign(cropped_sign)
+        
     def check_sign(self,img):
         """calls template matcher for sign identification"""
         
