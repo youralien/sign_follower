@@ -26,11 +26,13 @@ class StreetSignRecognizer(object):
         cv2.setMouseCallback('hsv_video_window', self.process_mouse_event)
         cv2.namedWindow('threshold_image')
         cv2.namedWindow('contour_image')
-        self.hsv_lb = np.array([0, 0, 0]) # hsv lower bound
+
+        # Trackers
+        self.hsv_lb = np.array([0, 168, 168]) # hsv lower bound
         cv2.createTrackbar('H lb', 'threshold_image', 0, 255, self.set_h_lb)
         cv2.createTrackbar('S lb', 'threshold_image', 0, 255, self.set_s_lb)
         cv2.createTrackbar('V lb', 'threshold_image', 0, 255, self.set_v_lb)
-        self.hsv_ub = np.array([255, 255, 255]) # hsv upper bound
+        self.hsv_ub = np.array([98, 255, 255]) # hsv upper bound
         cv2.createTrackbar('H ub', 'threshold_image', 0, 255, self.set_h_ub)
         cv2.createTrackbar('S ub', 'threshold_image', 0, 255, self.set_s_ub)
         cv2.createTrackbar('V ub', 'threshold_image', 0, 255, self.set_v_ub)
@@ -42,7 +44,7 @@ class StreetSignRecognizer(object):
 
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
-  
+    # Functions for trackers to set HSV bounds
     def set_h_lb(self, val):
         """ set hue lower bound """
         self.hsv_lb[0] = val
@@ -67,39 +69,17 @@ class StreetSignRecognizer(object):
         """ set value upper bound """
         self.hsv_ub[2] = val
 
-
-    def set_twist(self):
-        """ Setting the Twist velocity of the robot using proportional control. """
-        self.kp = .005
-        window_x = 320
-        moments = cv2.moments(self.binary_image)
-        if moments['m00'] != 0:
-            self.center_x, self.center_y = moments['m10']/moments['m00'], moments['m01']/moments['m00']
-            diff_x = self.center_x - window_x
-            print diff_x
-
-            if math.fabs(diff_x) < 20:
-                self.twist.linear.x = .3
-                self.twist.angular.z = 0
-
-            else:
-                #self.twist.linear.x = math.fabs(1/diff_x)*5
-                self.twist.linear.x = 0
-                self.twist.angular.z = -diff_x*self.kp
-
-
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
-        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
-        
-        self.binary_image = cv2.inRange(self.cv_image, (0, 200, 200), (40, 255, 255))
-        self.binary_image = cv2.GaussianBlur(self.binary_image, (3,3), 3)
-        #self.binary_image = cv2.inRange(self.hsv_image,(self.hsv_lower[0], self.hsv_lower[1], self.hsv_lower[2]),(self.hsv_upper[0], self.hsv_upper[1], self.hsv_upper[2]))
-        
-        #self.binary_image = cv2.inRange(self.hsv_image, (0, 180, 180), (100, 255, 255))
 
+        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)      
+        self.binary_image = cv2.inRange(self.hsv_image,(self.hsv_lb[0], self.hsv_lb[1], self.hsv_lb[2]),(self.hsv_ub[0], self.hsv_ub[1], self.hsv_ub[2]))
+        # Blur for better contours
+        self.binary_image = cv2.GaussianBlur(self.binary_image, (3,3), 0)
+        
+        # Set bounding box corner points
         left_top, right_bottom = self.sign_bounding_box()
         left, top = left_top
         right, bottom = right_bottom
@@ -132,19 +112,18 @@ class StreetSignRecognizer(object):
             defining topleft and bottomright corners of the bounding box
         """
         self.contour_image = copy.deepcopy(self.binary_image)
-        #contours = cv2.findContours(binary_image2, 1, 2)
         contours, hierarchy = cv2.findContours(self.contour_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE) 
-        cnt = contours[0]
-        if cnt.any():
-            #     self.center_x, self.center_y = int(moments['m10']/moments['m00']), int(moments['m01']/moments['m00'])
-            #     self.box_x,self.box_y,self.box_w,self.box_h = cv2.boundingRect(cnt)
+        if contours:
+            cnt = contours[-1]
+            if cnt.any():
                 vertices = cv2.boundingRect(cnt)
                 print vertices
                 x, y, w, h = vertices
-                if w > 5 and h > 5:
+                # only draw box if large enough
+                if w > 10 and h > 10:
                     self.left_top = (x, y)
                     self.right_bottom = (x+w, y+h)
-        return self.left_top, self.right_bottom
+            return self.left_top, self.right_bottom
 
 
 
