@@ -123,8 +123,8 @@ class StreetSignRecognizer(object):
 
             # creates a window and displays the image for X milliseconds
             if not self.cv_image is None:
-                # cv2.imshow('video_window', self.cv_image)
-                cv2.imshow('video_window', self.binary_image)
+                cv2.imshow('video_window', self.cv_image)
+                # cv2.imshow('video_window', self.binary_image)
                 cv2.waitKey(5)
                 
                 # cv2.imshow('image_info', self.image_info_window)
@@ -153,7 +153,6 @@ if __name__ == '__main__':
 
     for filename in scenes:
         scene_img = cv2.imread(filename, 0)
-        # print scene_img.shape
         pred = tm.predict(scene_img)
         print filename.split('/')[-1]
         print pred
