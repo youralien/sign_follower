@@ -8,6 +8,8 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+import operator
+from template_matcher import TemplateMatcher
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -18,8 +20,10 @@ class StreetSignRecognizer(object):
         rospy.init_node('street_sign_recognizer')
         self.cv_image = None                        # the latest image from the camera
         self.cv_image_res = None
+        self.grayscale_sign = None
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
+        cv2.namedWindow('grayscale_sign_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
         cv2.namedWindow('threshold_image')
@@ -31,6 +35,12 @@ class StreetSignRecognizer(object):
         cv2.createTrackbar('H ub', 'threshold_image', 0, 360, self.set_h_ub)
         cv2.createTrackbar('S ub', 'threshold_image', 0, 100, self.set_s_ub)
         cv2.createTrackbar('V ub', 'threshold_image', 0, 100, self.set_v_ub)
+
+        self.tm = TemplateMatcher({
+            "left": '/home/hdavidzhu/catkin_ws/src/sign_follower/images/leftturn_box_small.png',
+            "right": '/home/hdavidzhu/catkin_ws/src/sign_follower/images/rightturn_box_small.png',
+            "uturn": '/home/hdavidzhu/catkin_ws/src/sign_follower/images/uturn_box_small.png'
+        })
 
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
@@ -46,6 +56,14 @@ class StreetSignRecognizer(object):
 
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image_res, left_top, right_bottom, color=(0, 0, 255), thickness=5)
+
+        # Convert to grayscale
+        self.grayscale_sign = cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY)
+
+        # Predict
+        predictions = self.tm.predict(cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY))
+        prediction = max(predictions.iteritems(), key = operator.itemgetter(1))
+        print prediction
 
     def sign_bounding_box(self):
         """
@@ -77,6 +95,7 @@ class StreetSignRecognizer(object):
             if not self.cv_image is None:
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image_res)
+                cv2.imshow('grayscale_sign_window', self.grayscale_sign)
                 cv2.waitKey(5)
             r.sleep()
 
