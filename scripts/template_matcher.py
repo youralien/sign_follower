@@ -79,8 +79,8 @@ class TemplateMatcher(object):
 
         # Transform input image so that it matches the template image as well as possible
         M, mask = cv2.findHomography(img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
-        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
 
+        img_T = cv2.warpPerspective(img, M, self.signs[k].shape[::-1])
         visual_diff = compare_images(img_T, self.signs[k])
         return visual_diff
 
@@ -95,17 +95,17 @@ def compare_images(img1, img2):
 if __name__ == '__main__':
 
     images = {
-        "left": '../images/leftturn_box_small.png',
-        "right": '../images/rightturn_box_small.png',
-        "uturn": '../images/uturn_box_small.png'
+        "left": 'images/leftturn_box_small.png',
+        "right": 'images/rightturn_box_small.png',
+        "uturn": 'images/uturn_box_small.png'
     }
 
     tm = TemplateMatcher(images)
 
     scenes = [
-        "../images/uturn_scene.jpg",
-        "../images/leftturn_scene.jpg",
-        "../images/rightturn_scene.jpg"
+        "images/uturn_scene.jpg",
+        "images/leftturn_scene.jpg",
+        "images/rightturn_scene.jpg"
     ]
 
     for filename in scenes:
