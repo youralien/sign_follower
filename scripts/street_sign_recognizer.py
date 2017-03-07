@@ -8,6 +8,7 @@ import cv2_utils
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import numpy as np
+import template_matcher as tm
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -21,6 +22,7 @@ class StreetSignRecognizer(object):
         self.hsv_img = None                         # the image in hsv colorspace
         self.binary_img = None                      # the filtered image
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
+        # self.tm = tm.TemplateMatcher()
 
         cv2.namedWindow('raw')
         cv2.namedWindow('hsv')
@@ -45,6 +47,11 @@ class StreetSignRecognizer(object):
 
         # crop bounding box region of interest
         cropped_sign = self.cv_image[top:bottom, left:right]
+
+        # cropped_grayscale = cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY)
+        # cv2.imshow('raw', cropped_grayscale)
+        # cv2.waitKey()
+        # self.tm.predict(cropped_grayscale)
 
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
