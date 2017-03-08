@@ -8,7 +8,7 @@ an input image the best using the SIFT algorithm
 
 class TemplateMatcher(object):
 
-    def __init__ (self, images, min_match_count=10, good_thresh=0.7):
+    def __init__ (self, images, min_match_count=10, good_thresh=0.8):
         self.signs = {} #maps keys to the template images
         self.kps = {} #maps keys to the keypoints of the template images
         self.descs = {} #maps keys to the descriptors of the template images
@@ -45,7 +45,11 @@ class TemplateMatcher(object):
 
         for k in self.signs.keys():
             #cycle trough templage images (k) and get the image differences
-            visual_diff[k] = self._compute_prediction(k, img, kp, des)
+            try:
+                vis_diff = self._compute_prediction(k, img, kp, des)
+            except:
+                vis_diff = 1000000;
+            visual_diff[k] = vis_diff
 
         if visual_diff:
             #       convert difference between images (from visual_diff)
@@ -81,7 +85,7 @@ class TemplateMatcher(object):
         #       put corresponding keypoints from input image in img_pts
 
         matches = self.bf.knnMatch(self.descs[k], des, k = 2)
-        good_matches = [m for (m, n) in matches if (m.distance < 0.75 * n.distance)]
+        good_matches = [m for (m, n) in matches if (m.distance < self.good_thresh * n.distance)]
         img_pts = np.asarray([kp[match.trainIdx].pt for match in good_matches])
         template_pts = np.asarray([self.kps[k][match.queryIdx].pt for match in good_matches])
         

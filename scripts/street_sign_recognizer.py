@@ -9,6 +9,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from template_matcher import TemplateMatcher 
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -39,6 +40,14 @@ class StreetSignRecognizer(object):
         cv2.createTrackbar('H ub', 'threshold_image', self.hsv_ub[0], 255, self.set_h_ub)
         cv2.createTrackbar('S ub', 'threshold_image', self.hsv_ub[1], 255, self.set_s_ub)
         cv2.createTrackbar('V ub', 'threshold_image', self.hsv_ub[2], 255, self.set_v_ub)
+
+        images = {
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png',
+        "uturn": '../images/uturn_box_small.png'
+        }
+
+        self.tm = TemplateMatcher(images)
 
     def set_h_lb(self, val):
         """ set hue lower bound """
@@ -76,11 +85,15 @@ class StreetSignRecognizer(object):
         left, top = left_top
         right, bottom = right_bottom
 
-        # crop bounding box region of interest
-        cropped_sign = self.cv_image[top:bottom, left:right]
-
         # draw bounding box rectangle
         cv2.rectangle(self.hsv_image, left_top, right_bottom, color=(255, 0, 0), thickness=5)
+
+        # crop bounding box region of interest
+        cropped_sign = self.cv_image[top:bottom, left:right]
+        grayscale_sign = cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY)
+        print self.tm.predict(grayscale_sign)
+
+        
 
     def sign_bounding_box(self):
         """
@@ -101,7 +114,7 @@ class StreetSignRecognizer(object):
 
         x,y,w,h = cv2.boundingRect(cnt)
         expand = 0.2
-        left_top = (int(x-w*expand), int(y-h*expand))
+        left_top = (max(0,int(x-w*expand)), max(0,int(y-h*expand)))
         right_bottom = (int(x+w+w*expand), int(y+h+h*expand))
         return left_top, right_bottom
 
