@@ -10,6 +10,8 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 
+from template_matcher import TemplateMatcher
+
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
@@ -21,7 +23,10 @@ class StreetSignRecognizer(object):
         self.cv_hsv_image = None
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
         cv2.namedWindow('video_window')
-        rospy.Subscriber("/camera/image_raw", Image, self.process_image)
+
+        self.template_matcher = TemplateMatcher()
+
+        rospy.Subscriber("/camera/image_raw", Image, self.image_callback)
 
         self.image_info_window = None
         self.hsv_lb = np.array([20, 170, 154])  # hsv lower bound
@@ -31,6 +36,9 @@ class StreetSignRecognizer(object):
         kernel_size = 5
         self.morphology_kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
+        self.bounding_box_extend = 30
+
+        # tool to find HSV in image (TODO: refactor into new node)
         self.get_hue_range_tool = False
         if self.get_hue_range_tool:
             cv2.namedWindow('threshold_image')
@@ -65,67 +73,37 @@ class StreetSignRecognizer(object):
         """ set value upper bound """
         self.hsv_ub[2] = val
 
-    def process_image(self, msg):
+    def image_callback(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_bgr_image for subsequent processing """
         self.cv_bgr_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         self.cv_hsv_image = cv2.cvtColor(self.cv_bgr_image, cv2.COLOR_BGR2HSV)
-
-        left_top, right_bottom = self.sign_bounding_box()
-        left, top = left_top
-        right, bottom = right_bottom
-
-        # crop bounding box region of interest
-        cropped_sign = self.cv_bgr_image[top:bottom, left:right]
-
-        # draw bounding box rectangle
-        cv2.rectangle(self.cv_bgr_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
-
-    def find_blobs(self, grayscale_image):
-        params = cv2.SimpleBlobDetector_Params()
-        params.minThreshold = 0
-        params.maxThreshold = 10000
-
-        # filter by area
-        params.filterByArea = True
-        params.minArea = 40  # units?
-
-        # filter by circularity
-        params.filterByCircularity = False
-        params.minCircularity = 0.1
-
-        # filter by convexity
-        params.filterByConvexity = False
-        params.minConvexity = 0.87
-
-        # filter by inertia
-        params.filterByInertia = False
-        params.minInertiaRatio = 0.01
-
-        detector = cv2.SimpleBlobDetector_create(params)
-
-        keypoints = detector.detect(grayscale_image)
-
-        print keypoints
-
-        return cv2.drawKeypoints(grayscale_image, keypoints, np.array([]), (255, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        self.image_processed = False
 
     def find_yellow_parts(self, hsv_image):
+        """
+        Takes: HSV image
+        Returns a thresholded image that contains the yellow parts of the scene
+        """
         threshold_image = cv2.inRange(
             hsv_image,
             self.hsv_lb,
             self.hsv_ub
         )
 
-        return threshold_image  # return cv2.filter2D(threshold_image, -1, kernel)
+        return threshold_image
 
     def find_big_parts(self, threshold_image):
+        """
+        Takes: Grayscale threshold image
+        Returns a threshold image with smaller parts removed
+        """
         # use morphology to get rid of small parts
-        eroded = cv2.erode(threshold_image, self.morphology_kernel, iterations=1)
-        # and make everything we found a bit bigger
-        dilated = cv2.dilate(eroded, self.morphology_kernel, iterations=1)
+        morphed = cv2.erode(threshold_image, self.morphology_kernel, iterations=1)
+        # and make everything we found a bit bigger (probably unnecessary)
+        morphed = cv2.dilate(morphed, self.morphology_kernel, iterations=1)
 
-        return dilated
+        return morphed
 
     def sign_bounding_box(self):
         """
@@ -137,20 +115,62 @@ class StreetSignRecognizer(object):
         yellow_threshold = self.find_yellow_parts(self.cv_hsv_image)
         big_yellow_parts = self.find_big_parts(yellow_threshold)
 
-        x, y, w, h = cv2.boundingRect(big_yellow_parts)
+        max_width = self.cv_hsv_image.shape[1] - 1
+        max_height = self.cv_hsv_image.shape[0] - 1
 
-        left_top = (x, y)
-        right_bottom = (x + w, y + h)
+        x, y, w, h = cv2.boundingRect(big_yellow_parts)
+        r = self.bounding_box_extend
+        left_top = (
+            max(x - r, 0),
+            max(y - r, 0)
+        )
+
+        right_bottom = (
+            min(x + w + r, max_width),
+            min(y + h + r, max_height)
+        )
+
         return left_top, right_bottom
+
+    def recognize_sign(self):
+        left_top, right_bottom = self.sign_bounding_box()
+        left, top = left_top
+        right, bottom = right_bottom
+
+        # crop bounding box region of interest
+        cropped_sign = self.cv_bgr_image[top:bottom, left:right]
+
+        # attempt to recognize sign
+        sign_type_distribution = self.template_matcher.predict(
+            cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY)
+        )
+
+        most_likely_sign_type = max(sign_type_distribution, key=sign_type_distribution.get)
+        print most_likely_sign_type
+        if sign_type_distribution[most_likely_sign_type] > 0.5:
+            cv2.putText(
+                self.cv_bgr_image,
+                "{}: {}".format(most_likely_sign_type, sign_type_distribution[most_likely_sign_type]),
+                left_top,
+                cv2.FONT_HERSHEY_PLAIN,
+                1,
+                (0, 0, 255)
+            )
+
+        # draw bounding box rectangle
+        cv2.rectangle(self.cv_bgr_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
     def run(self):
         """ The main run loop"""
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if self.cv_bgr_image is not None:
-                print "here"
-                # creates a window and displays the image for X milliseconds
+                # prevent reprocessing images
+                if not self.image_processed:
+                    self.recognize_sign()
+                    self.image_processed = True
 
+                # creates a window and displays the image for X milliseconds
                 cv2.imshow(
                     'video_window',
                     self.cv_bgr_image

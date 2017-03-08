@@ -11,10 +11,15 @@ This code determines which of a set of template images matches
 an input image the best using the SIFT algorithm
 """
 
+default_template_images = {
+    "left": '../images/leftturn_box_small.png',
+    "right": '../images/rightturn_box_small.png',
+    "uturn": '../images/uturn_box_small.png'
+}
+
 
 class TemplateMatcher(object):
-
-    def __init__(self, images, min_match_count=10, good_thresh=0.7, debug=False):
+    def __init__(self, images=default_template_images, min_match_count=10, good_thresh=0.7, debug=False):
         self.signs = {}  # maps keys to the template images
         self.kps = {}  # maps keys to the keypoints of the template images
         self.descs = {}  # maps keys to the descriptors of the template images
@@ -68,16 +73,14 @@ class TemplateMatcher(object):
         if visual_diff:
             # convert difference between images (from visual_diff)
             # to confidence values (stored in template_confidence)
-            total = sum([1.0 / visual_diff[k] for k in self.signs.keys()])
+            total = sum([1.0 / visual_diff[k] if visual_diff[k] is not None else 0.0 for k in self.signs.keys()])
+            if total > 0.0:
+                return {k: 1.0 / visual_diff[k] / total if visual_diff[k] is not None else 0.0 for k in self.signs.keys()}
 
-            template_confidence = {k: 1.0 / visual_diff[k] / total for k in self.signs.keys()}
-        else:
-            # if visual diff was not computed
-            # (bad crop, homography could not be computed)
-            # set 0 confidence for all signs
-            template_confidence = {k: 0 for k in self.signs.keys()}
-
-        return template_confidence
+        # if visual diff was not computed
+        # (bad crop, homography could not be computed)
+        # set 0 confidence for all signs
+        return {k: 0 for k in self.signs.keys()}
 
     def _compute_prediction(self, k, scene_img, scene_kps, scene_desc):
         """
@@ -110,13 +113,27 @@ class TemplateMatcher(object):
             [scene_kps[m.trainIdx].pt for m in good_keypoints]
         ).reshape(-1, 1, 2)
 
+        # if we can't find any matching keypoints, bail
+        # (probably the scene image was nonexistant/real bad)
+        if scene_img_pts.shape[0] == 0:
+            return None
+
         # find out how to transform scene image to best match template
         M, mask = cv2.findHomography(scene_img_pts, template_pts, cv2.RANSAC, self.ransac_thresh)
-        # Transform input image so that it matches the template image as well as possible
-        scene_img_T = cv2.warpPerspective(scene_img, M, self.signs[k].shape[::-1])
 
-        visual_diff = self.compare_images(scene_img_T, self.signs[k])
-        return visual_diff
+        # if we can't find a good transform, bail
+        if M is None:
+            return None
+
+        try:
+            # Transform input image so that it matches the template image as well as possible
+            scene_img_T = cv2.warpPerspective(scene_img, M, self.signs[k].shape[::-1])
+
+            visual_diff = self.compare_images(scene_img_T, self.signs[k])
+            return visual_diff
+        except cv2.error as e:
+            # something went wrong, but we can be pretty sure it's not this one
+            return None
 
     def _run_test(self):
         scenes = [
@@ -147,12 +164,6 @@ class TemplateMatcher(object):
         return err
 
 if __name__ == '__main__':
-    images = {
-        "left": '../images/leftturn_box_small.png',
-        "right": '../images/rightturn_box_small.png',
-        "uturn": '../images/uturn_box_small.png'
-    }
-
-    tm = TemplateMatcher(images, debug=False)
+    tm = TemplateMatcher()
 
     tm._run_test()
