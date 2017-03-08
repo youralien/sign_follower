@@ -29,6 +29,8 @@ class TemplateMatcher(object):
         else:
             self.sift = cv2.SIFT()  # initialize SIFT to be used for image matching
 
+        # debug mode shows each comparison in a window and
+        # slows everything down
         self.debug = debug
 
         if self.debug:
@@ -89,11 +91,8 @@ class TemplateMatcher(object):
         scene_kps: keypoints from scene image,   scene_desc: descriptors from scene image
         """
 
-        # TODO: find corresponding points in the input image and the template image
-        #       put keypoints from template image in template_pts
-        #       put corresponding keypoints from input image in img_pts
+        # find corresponding points in the input image and the template image
         bf = cv2.BFMatcher()
-        # find SIFT descriptor matches in the images
         matches = bf.knnMatch(self.descs[k], scene_desc, k=2)
 
         # Apply Lowe Ratio Test to the keypoints
@@ -103,12 +102,14 @@ class TemplateMatcher(object):
             if m.distance < self.good_thresh * n.distance:
                 good_keypoints.append(m)
 
+        # put keypoints from template image in template_pts
         # transform the keypoint data into arrays for homography check
         # grab precomputed points
         template_pts = np.float32(
             [self.kps[k][m.queryIdx].pt for m in good_keypoints]
         ).reshape(-1, 1, 2)
 
+        # put corresponding keypoints from input image in scene_img_pts
         scene_img_pts = np.float32(
             [scene_kps[m.trainIdx].pt for m in good_keypoints]
         ).reshape(-1, 1, 2)
@@ -126,16 +127,24 @@ class TemplateMatcher(object):
             return None
 
         try:
-            # Transform input image so that it matches the template image as well as possible
-            scene_img_T = cv2.warpPerspective(scene_img, M, self.signs[k].shape[::-1])
+            # Transform input image so that it matches the template image as
+            # well as possible
+            scene_img_T = cv2.warpPerspective(
+                scene_img,
+                M,
+                self.signs[k].shape[::-1]
+            )
 
-            visual_diff = self.compare_images(scene_img_T, self.signs[k])
-            return visual_diff
+            # find and return the visual difference (MSE)
+            return self.compare_images(scene_img_T, self.signs[k])
         except cv2.error as e:
-            # something went wrong, but we can be pretty sure it's not this one
+            # something went wrong, we can be pretty sure it's not this one
             return None
 
     def _run_test(self):
+        """
+        Run a basic test of the matcher and print the results to the console.
+        """
         scenes = [
             "../images/uturn_scene.jpg",
             "../images/leftturn_scene.jpg",
@@ -149,6 +158,10 @@ class TemplateMatcher(object):
             print pred
 
     def compare_images(self, img1, img2):
+        """
+        Return a number that indicates how different two images are.
+        Results should be normalized later.
+        """
         if self.debug:
             cv2.imshow('img1', img1)
             cv2.imshow('img2', img2)
@@ -160,7 +173,7 @@ class TemplateMatcher(object):
         err = np.sum((img1.astype('float') - img2.astype('float')) ** 2)
         err /= float(img1.shape[0] * img2.shape[1])
 
-        # lower is more similar
+        # lower is more similar (better)
         return err
 
 if __name__ == '__main__':
