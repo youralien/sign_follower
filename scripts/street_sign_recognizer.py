@@ -134,14 +134,10 @@ class StreetSignRecognizer(object):
         (left_top, right_bottom) where left_top and right_bottom are tuples of (x_pixel, y_pixel)
             defining topleft and bottomright corners of the bounding box
         """
-        # TODO: YOUR SOLUTION HERE
         yellow_threshold = self.find_yellow_parts(self.cv_hsv_image)
         big_yellow_parts = self.find_big_parts(yellow_threshold)
-        # im2, contours, hierarchy = cv2.findContours(self.yellow_parts, 1, 2)
 
         x, y, w, h = cv2.boundingRect(big_yellow_parts)
-
-        # x, y, w, h = 1,1,10,10
 
         left_top = (x, y)
         right_bottom = (x + w, y + h)
