@@ -1,1 +1,11 @@
-*.pyc
+--2017-02-24 21:47:04--  https://www.gitignore.io/api/python%2Cvim%2Cros
+Resolving www.gitignore.io (www.gitignore.io)... 104.28.0.76, 104.28.1.76, 2400:cb00:2048:1::681c:14c, ...
+Connecting to www.gitignore.io (www.gitignore.io)|104.28.0.76|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1838 (1.8K) [text/plain]
+Saving to: ‘python,vim,ros’
+
+     0K .                                                     100% 81.2M=0s
+
+2017-02-24 21:47:04 (81.2 MB/s) - ‘python,vim,ros’ saved [1838/1838]
+
