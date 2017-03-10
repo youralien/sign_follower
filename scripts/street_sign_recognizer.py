@@ -8,16 +8,18 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
-import template_matcher
+from template_matcher import TemplateMatcher
 
 class StreetSignRecognizer(object):
     """ This robot should recognize street signs """
 
-    def __init__(self):
+    def __init__(self, templates):
         """ Initialize the street sign reocgnizer """
         rospy.init_node('street_sign_recognizer')
         self.cv_image = None                        # the latest image from the camera
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
+        self.template_matcher = TemplateMatcher(templates)
+        self.template_estimates = {}
         cv2.namedWindow('video_window')
         rospy.Subscriber("/camera/image_raw", Image, self.process_image)
 
@@ -42,6 +44,9 @@ class StreetSignRecognizer(object):
         # draw bounding box rectangle
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
+        # predict which sign it is
+        #self.template_estimates = self.template_matcher.predict(cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY))
+
     def sign_bounding_box(self):
         """
         Returns
@@ -54,11 +59,20 @@ class StreetSignRecognizer(object):
         #Get descriptors of boundry box
         x,y,w,h = cv2.boundingRect(points)
 
+        #The processing underestimates sign area
+        #so we need to add some padding with marg(margins)
+        marg = 10
+        y = max(y - marg, 0)
+        x = max(x - marg, 0)
+        w = min(w + 3*marg, self.binary_image.shape[1])
+        h = min(h + 3*marg, self.binary_image.shape[0])
+
         #Identify points based on what was found
         #Have to transform coordinate system, x and y
         #are different for this bounding box.
         left_top = (y, x)
         right_bottom = (y+h, x+w)
+
         return left_top, right_bottom
 
     def run(self):
@@ -66,7 +80,7 @@ class StreetSignRecognizer(object):
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.cv_image is None:
-                print "here"
+                #print self.template_estimates
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
                 cv2.imshow('hsv_window', self.hsv_image)
@@ -143,6 +157,12 @@ class HSVSelector(object):
 #End of HSVSelector Class
 
 if __name__ == '__main__':
-    node = StreetSignRecognizer()
-    # node = HSVSelector()
+    #Images needed for finding the sign
+    images = {
+        "uturn": '../images/uturn_box_small.png',
+        "left": '../images/leftturn_box_small.png',
+        "right": '../images/rightturn_box_small.png'
+        }
+    # node = StreetSignRecognizer(images)
+    node = HSVSelector()
     node.run()
