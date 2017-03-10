@@ -31,7 +31,7 @@ class StreetSignRecognizer(object):
         #Then using HSV to identify the yellow in the sign (representing in binary_image)
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         self.hsv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2HSV)
-        self.binary_image = cv2.inRange(self.cv_image,(0,175,100),(50,255,255))
+        self.binary_image = cv2.inRange(self.cv_image,(0,126,100),(50,255,255))
 
         #Find the edges of the sign, for cropping
         left_top, right_bottom = self.sign_bounding_box()
@@ -45,7 +45,7 @@ class StreetSignRecognizer(object):
         cv2.rectangle(self.cv_image, left_top, right_bottom, color=(0, 0, 255), thickness=5)
 
         # predict which sign it is
-        #self.template_estimates = self.template_matcher.predict(cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY))
+        self.template_estimates = self.template_matcher.predict(cv2.cvtColor(cropped_sign, cv2.COLOR_BGR2GRAY))
 
     def sign_bounding_box(self):
         """
@@ -80,7 +80,7 @@ class StreetSignRecognizer(object):
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
             if not self.cv_image is None:
-                #print self.template_estimates
+                print self.template_estimates
                 # creates a window and displays the image for X milliseconds
                 cv2.imshow('video_window', self.cv_image)
                 cv2.imshow('hsv_window', self.hsv_image)
@@ -163,6 +163,6 @@ if __name__ == '__main__':
         "left": '../images/leftturn_box_small.png',
         "right": '../images/rightturn_box_small.png'
         }
-    # node = StreetSignRecognizer(images)
-    node = HSVSelector()
+    node = StreetSignRecognizer(images)
+    # node = HSVSelector()
     node.run()
