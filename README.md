@@ -1,45 +1,7 @@
-# Sign Follower
-
-By the end of the Traffic Sign Follower project, you will have a robot that will look like this!
-
-**Video Demo:** [NEATO ROBOT OBEYS TRAFFIC SIGNS](https://youtu.be/poReVhj1lSA)
+# Sign Detector
+This project, based on one by [Ryan Louie](https://github.com/youralien), Kai Levy, and Dakota Nelson, was provided as a scaffolded way to learn the basics of CV in ROS by the [Computational Robotics](https://sites.google.com/site/comprobo17/) class at Olin College of Engineering. In this project, images from a live camera on a Neato robot are filtered, cropped, fed through image recognition that...
 
 ## System
-![alt text][system-overview]
-
-[system-overview]: images/vision-nav-system-overview.png "Three stages of the vision and navigation system: 1) waypoint navigation 2) sign recognition, and 3) sign obeyance via changing the next waypoint"
-
-Navigation and mapping is handled by the built-in ROS package ```neato_2dnav``` .  Mapping the location of the robot in the environment was handled by [```gmapping```](http://wiki.ros.org/gmapping), a package that provides laser-based SLAM (simultaneous localization and mapping).  Navigation was handled by the [```move_base```](http://wiki.ros.org/move_base) package;   our program published waypoints to the ```/move_base_simple/goal``` topic while the internals of path planning and obstacle avoidance were abstracted away.
-
-You will put your comprobo-chops to the test by developing a sign detection node which publishes to a topic, ```/predicted_sign```, once it is confident about recognizing the traffic sign in front of it.
-
-### Running and Developing the street_sign_recognizer node
-
-We've provided some rosbags that will get you going.
-
-[uturn.bag](https://drive.google.com/open?id=0B85lERk460TUYjFGLVg1RXRWams)
-[rightturn.bag](https://drive.google.com/open?id=0B85lERk460TUN3ZmUk15dmtPTFk)
-[leftturn.bag](https://drive.google.com/open?id=0B85lERk460TUTkdTQW5yQ0FwSEE)
-
-Start by replaying these rosbags on loop:
-
-```
-rosbag play uturn.bag -l
-```
-
-They have `/camera/image_raw/compressed` channel recorded. In order to republish the compressed image as a raw image,
-
-```
-rosrun image_transport republish compressed in:=/camera/image_raw _image_transport:=compressed raw out:=/camera/image_raw
-```
-
-To run the node,
-
-```
-rosrun sign_follower street_sign_recognizer.py
-```
-
-If you ran on the steps above correctly, a video window should appear visualizing the Neato moving towards a traffic sign.
 
 ### Detecting Signs in Scene Images
 Reliable detection of traffic signs and creating accurate bounding box crops is an important preprocessing step for further steps in the data pipeline.
