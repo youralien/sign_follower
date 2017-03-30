@@ -12,7 +12,7 @@ cv2.namedWindow("my_window")
 
 # NumPy array slicing!!
 grid_cell = img[grid_cell_h:2*grid_cell_h,
-                grid_cell_w:2*grid_cell_w] 
+                grid_cell_w:2*grid_cell_w]
 
 cv2.imshow("my_window", grid_cell)
-cv2.waitKey(0);
+cv2.waitKey(0)
