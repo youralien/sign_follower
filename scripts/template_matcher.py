@@ -52,7 +52,7 @@ class TemplateMatcher(object):
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}
 
-        return template_confidence
+        return min(template_confidence, key = template_confidence.get)
 
 
     def _compute_prediction(self, k, img, kp, des):
@@ -66,6 +66,8 @@ class TemplateMatcher(object):
         http://opencv-python-tutroals.readthedocs.io
         /en/latest/py_tutorials/py_feature2d/py_feature_homography/py_feature_homography.html'''
         FLANN_INDEX_KDTREE = 0
+        # print "compute Prediction", img.shape
+        # print "des", des.shape, self.descs[k].shape
         index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
         search_params = dict(checks = 50)
         flann = cv2.FlannBasedMatcher(index_params, search_params)
@@ -99,7 +101,8 @@ def compare_images(img1, img2):
     img1 = np.ravel((img1-np.mean(img1))/np.std(img1))
     img2 = np.ravel((img2-np.mean(img2))/np.std(img2))
     # then get the corelation coeficient
-    return np.corrcoef(img1,img2)[0,1]
+    #return np.corrcoef(img1,img2)[0,1]
+    return np.linalg.norm(img1 - img2)
 
 if __name__ == '__main__':
     images = {
@@ -117,6 +120,7 @@ if __name__ == '__main__':
 
     for filename in scenes:
         scene_img = cv2.imread(filename, 0)
+        # print scene_img.shape
         pred = tm.predict(scene_img)
         print filename.split('/')[-1]
         print pred
