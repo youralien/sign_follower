@@ -59,7 +59,6 @@ class TemplateMatcher(object):
             for k in template_confidence:
                 template_confidence[k] /= total
 
-
         else: # if visual diff was not computed (bad crop, homography could not be computed)
             # set 0 confidence for all signs
             template_confidence = {k: 0 for k in self.signs.keys()}

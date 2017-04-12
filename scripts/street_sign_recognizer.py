@@ -56,6 +56,7 @@ class StreetSignRecognizer(object):
 
         left_top = (x, y)
         right_bottom = (x+w, y+h)
+
         return left_top, right_bottom
 
     def run(self):
