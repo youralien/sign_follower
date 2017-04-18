@@ -1,3 +1,8 @@
+to run this code, run 
+    roslaunch sign_localizer localize.launch
+
+one parameter exists, called `self.feature_thresh
+
 # Sign Follower
 
 By the end of the Traffic Sign Follower project, you will have a robot that will look like this!

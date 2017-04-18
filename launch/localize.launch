@@ -1,0 +1,6 @@
+<launch>
+
+<node pkg="sign_localizer" type="runner.py" name="dhash_sign_localizer" output="screen"/>
+
+<node pkg="image_transport" type="republish" name="decompression" args="compressed in:=camera/image_raw _image_transport:=compressed raw out:=/camera/image_raw"/>
+</launch>
